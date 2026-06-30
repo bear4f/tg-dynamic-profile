@@ -1,7 +1,8 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from telethon.errors import FloodWaitError
@@ -9,12 +10,11 @@ from telethon.tl.functions.account import UpdateProfileRequest
 
 from .client import build_client
 from .config import load_config
+from .control import register_control
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
-
-# Telegram first_name hard limit
-NAME_MAX = 64
+NAME_MAX = 64  # Telegram first_name hard limit
 
 
 @dataclass
@@ -28,18 +28,63 @@ class Ctx:
         return f"{self.prefix}{self.separator}{body}"
 
 
+@dataclass
+class State:
+    """Shared, mutable runtime state. The control panel edits cfg live."""
+    cfg: dict
+    config_path: str
+    paused: bool = False
+    poke: Optional[asyncio.Event] = field(default=None)
+
+    def wake(self):
+        """Ask the updater to re-render immediately (after a live change)."""
+        if self.poke:
+            self.poke.set()
+
+
+async def _updater(client, state):
+    last = None
+    while True:
+        delay = max(int(state.cfg.get("update_interval", 60)), 10)
+        try:
+            if not state.paused:
+                cfg = state.cfg
+                mode = cfg["mode"]
+                fn = REGISTRY.get(mode)
+                if fn is None:
+                    log.error("unknown mode '%s'", mode)
+                else:
+                    now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
+                    opts = cfg.get("modes", {}).get(mode, {})
+                    ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
+                    name = (await fn(ctx))[:NAME_MAX]
+                    if name != last:
+                        await client(UpdateProfileRequest(first_name=name))
+                        last = name
+                        log.info("name -> %s", name)
+        except FloodWaitError as e:
+            log.warning("FloodWait: sleeping %ss", e.seconds)
+            await asyncio.sleep(e.seconds + 5)
+            continue
+        except Exception as e:
+            log.error("update failed: %s", e)
+
+        # sleep until next tick, but wake early (and force re-render) on a live change
+        try:
+            await asyncio.wait_for(state.poke.wait(), timeout=delay)
+            state.poke.clear()
+            last = None
+        except asyncio.TimeoutError:
+            pass
+
+
 async def run_loop(config_path):
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(config_path)
-    mode = cfg["mode"]
-    if mode not in REGISTRY:
+    if cfg["mode"] not in REGISTRY:
         raise SystemExit(
-            f"Unknown mode '{mode}'. Available: {', '.join(sorted(REGISTRY))}")
-
-    fn = REGISTRY[mode]
-    tz = ZoneInfo(cfg["timezone"])
-    interval = max(int(cfg["update_interval"]), 10)
+            f"Unknown mode '{cfg['mode']}'. Available: {', '.join(sorted(REGISTRY))}")
 
     client = build_client(cfg)
     await client.connect()
@@ -47,24 +92,12 @@ async def run_loop(config_path):
         raise SystemExit("Not authorized. Run `python app.py login` first.")
 
     me = await client.get_me()
-    log.info("Logged in as @%s | mode=%s | interval=%ss",
-             me.username or me.first_name, mode, interval)
+    state = State(cfg=cfg, config_path=config_path, poke=asyncio.Event())
+    register_control(client, state)
 
-    last = None
-    while True:
-        try:
-            now = datetime.now(tz)
-            opts = cfg.get("modes", {}).get(mode, {})
-            ctx = Ctx(now, cfg["prefix"], cfg["separator"], opts)
-            name = (await fn(ctx))[:NAME_MAX]
-            if name != last:
-                await client(UpdateProfileRequest(first_name=name))
-                last = name
-                log.info("name -> %s", name)
-        except FloodWaitError as e:
-            log.warning("FloodWait: sleeping %ss", e.seconds)
-            await asyncio.sleep(e.seconds + 5)
-            continue
-        except Exception as e:  # keep the loop alive on transient errors
-            log.error("update failed: %s", e)
-        await asyncio.sleep(interval)
+    trigger = (cfg.get("control") or {}).get("trigger", "⚙️")
+    log.info("Logged in as @%s | mode=%s | 控制面板: 在收藏夹发送 '%s'",
+             me.username or me.first_name, cfg["mode"], trigger)
+
+    client.loop.create_task(_updater(client, state))
+    await client.run_until_disconnected()

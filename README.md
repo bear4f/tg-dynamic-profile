@@ -23,6 +23,52 @@ YourName NewYear 156D  # 倒计时
 
 ---
 
+## 🚀 一键部署
+
+一条命令拉起交互式安装向导（克隆 → 建 venv → 装依赖 → 引导填凭证、登录、选模式）：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/bear4f/tg-dynamic-profile/main/deploy.sh)
+```
+
+向导跑完后：
+```bash
+cd ~/tg-dynamic-profile
+.venv/bin/python app.py run        # 启动（含 ⚙️ 控制面板）
+```
+
+> 想常驻后台，见下方『部署为 systemd 服务』。
+
+---
+
+## ⚙️ Emoji 控制面板（运行后随时改）
+
+程序运行后，**不用 SSH、不用改文件**，直接在 Telegram 操作：
+
+1. 打开 **Saved Messages（收藏夹）**
+2. 发送一个 `⚙️` —— userbot 会把它就地编辑成控制面板
+3. 在同一对话发送点命令实时修改：
+
+```
+.mode weather      切换模式
+.prefix Bob        改前缀
+.interval 120      改刷新间隔(秒)
+.sep  |            改分隔符
+.tz Asia/Shanghai  改时区
+.off  /  .on       暂停 / 恢复更新
+.status            查看当前状态
+```
+
+改动**立即生效**并写回 `config.json`（重启后保留）。触发表情、命令前缀、生效对话都可在 `config.json` 的 `control` 段自定义：
+
+```jsonc
+"control": { "enabled": true, "trigger": "⚙️", "prefix": ".", "chat": "me" }
+```
+
+> 仅在 `chat`（默认你自己的收藏夹）里的**你本人发出**的消息才会被识别，不会影响普通聊天。
+
+---
+
 ## 功能模式
 
 | mode | 效果示例 | 说明 |
@@ -50,13 +96,21 @@ YourName NewYear 156D  # 倒计时
 
 ### 2. 部署
 ```bash
-git clone <your-repo-url> tg-dynamic-profile
+git clone https://github.com/bear4f/tg-dynamic-profile.git
 cd tg-dynamic-profile
 
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
 
+**最省事**：直接跑向导，一步到位（填凭证 → 登录 → 选模式）：
+```bash
+python app.py setup
+```
+
+或手动：
+```bash
 cp config.example.json config.json
 # 编辑 config.json，填入 api_id / api_hash / prefix / mode
 ```

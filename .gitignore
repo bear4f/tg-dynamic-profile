@@ -1,0 +1,13 @@
+# secrets / runtime state
+config.json
+*.session
+*.session-journal
+.env
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# os
+.DS_Store

@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram Dynamic Profile
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tg-dynamic-profile
+ExecStart=/opt/tg-dynamic-profile/.venv/bin/python app.py run
+Restart=always
+RestartSec=10
+# Optional: keep secrets out of config.json
+# Environment=TG_API_ID=123456
+# Environment=TG_API_HASH=your_api_hash
+
+[Install]
+WantedBy=multi-user.target

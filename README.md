@@ -1,0 +1,158 @@
+# TG Dynamic Profile · Telegram 动态昵称系统
+
+用你自己的 Telegram 账号（userbot），让昵称（First Name）**自动变化**：实时时间、日期星期、天气、CPU/RAM、延迟、币价、倒计时、节日……全部由一个 **配置文件 + 菜单** 驱动，无需改 Python 代码。
+
+```
+YourName 09:15        # 时间
+☀️ YourName 09:15      # 白天/夜晚
+YourName ☀️28°C        # 天气
+YourName BTC 108k      # 币价
+YourName NewYear 156D  # 倒计时
+🎄 YourName            # 节日
+```
+
+> 别人看到的是你**真实的昵称**（不是第三方客户端本地渲染），所有人可见。
+
+---
+
+## ⚠️ 重要提醒（先读）
+
+- 这是 **userbot**（用你的个人账号自动操作），请使用**小号 / 自己的账号**，风险自负。
+- Telegram 对 `account.updateProfile` 有**限流**。本项目默认 `update_interval = 60s`，并自动捕获 `FloodWait` 退避。**不要把间隔设到 10 秒以内**，否则容易被限流甚至封号。
+- 仅在昵称内容**真的变化**时才发请求（内置去重），最大程度减少调用。
+
+---
+
+## 功能模式
+
+| mode | 效果示例 | 说明 |
+|------|----------|------|
+| `time` | `YourName 09:15` | 实时时间，`format` 可自定义 |
+| `datetime` | `YourName 06/30 09:15` | 日期 + 时间 |
+| `weekday` | `YourName 周二` / `Tue` | 星期（zh/en） |
+| `daynight` | `☀️ YourName 09:15` / `🌙 …` | 按小时切换昼夜表情 |
+| `weather` | `YourName ☀️28°C` | Open-Meteo 免 key，自动缓存 |
+| `system` | `YourName CPU 12% RAM 43%` | 本机 CPU/RAM（VPS 运维） |
+| `ping` | `YourName HK 23ms` | ping 某主机延迟 |
+| `crypto` | `YourName BTC 108k` | CoinGecko 币价 |
+| `countdown` | `YourName Exam 8D` | 倒计时天数 |
+| `holiday` | `🎄 YourName` | 节日自动加表情 |
+| `custom` | 任意模板 | `{prefix}/{time}/{date}` 占位符 |
+
+模式是**插件式注册**的，加新功能只要在 `tgprofile/providers/builtin.py` 写一个带 `@provider("name")` 的函数即可。
+
+---
+
+## 安装
+
+### 1. 获取 API 凭证
+访问 https://my.telegram.org → API development tools → 创建应用，拿到 **api_id** 和 **api_hash**。
+
+### 2. 部署
+```bash
+git clone <your-repo-url> tg-dynamic-profile
+cd tg-dynamic-profile
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+cp config.example.json config.json
+# 编辑 config.json，填入 api_id / api_hash / prefix / mode
+```
+
+也可用环境变量代替（推荐，不把密钥写进文件）：
+```bash
+export TG_API_ID=123456
+export TG_API_HASH=abcdef0123456789abcdef0123456789
+```
+
+### 3. 首次登录（生成 session）
+```bash
+python app.py login
+# 按提示输入手机号、验证码（必要时两步验证密码）
+```
+成功后会生成 `tg_profile.session`，之后无需再登录。
+
+### 4. 运行
+```bash
+python app.py run          # 前台运行
+python app.py menu         # 交互菜单：切换模式 / 改前缀 / 改间隔
+```
+
+---
+
+## 部署为 systemd 服务（VPS 常驻）
+
+```bash
+sudo bash install.sh        # 自动建 venv、装依赖、装服务到 /opt/tg-dynamic-profile
+# 或手动：
+sudo cp systemd/tg-profile.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now tg-profile
+journalctl -u tg-profile -f   # 看实时日志
+```
+
+> ⚠️ systemd 是非交互的，**务必先在终端跑过 `python app.py login`** 生成 session，再启动服务。
+
+---
+
+## 配置说明（config.json）
+
+```jsonc
+{
+  "api_id": 123456,
+  "api_hash": "your_api_hash",
+  "session": "tg_profile",        // session 文件名
+  "mode": "time",                 // 当前生效的模式
+  "prefix": "YourName",             // 名字主体
+  "separator": " ",               // 前缀与内容之间的分隔符，可用 " | "、"｜"
+  "timezone": "Europe/London",      // 时区
+  "update_interval": 60,          // 刷新间隔（秒），建议 >= 60
+  "modes": {                      // 各模式的参数
+    "time":     { "format": "%H:%M" },
+    "datetime": { "format": "%m/%d %H:%M" },
+    "weekday":  { "lang": "zh" },
+    "daynight": { "day_emoji": "☀️", "night_emoji": "🌙", "day_start": 6, "night_start": 18 },
+    "weather":  { "lat": 51.5074, "lon": -0.1278, "cache_ttl": 1800 },
+    "system":   { "format": "CPU {cpu:.0f}% RAM {ram:.0f}%" },
+    "ping":     { "host": "1.1.1.1", "label": "HK" },
+    "crypto":   { "symbol": "BTC", "vs": "usd", "cache_ttl": 120 },
+    "countdown":{ "target": "2027-01-01", "label": "NewYear" },
+    "holiday":  { "dates": { "01-01": "🎆", "12-25": "🎄", "10-31": "🎃" } },
+    "custom":   { "template": "{prefix} {time}" }
+  }
+}
+```
+
+切换模式只需改 `"mode"` 字段（或用 `python app.py menu`），无需改代码。
+
+---
+
+## 自己加一个模式
+
+在 `tgprofile/providers/builtin.py` 末尾：
+
+```python
+@provider("stars")
+async def mode_stars(ctx):
+    async def fetch():
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get("https://api.github.com/repos/owner/repo")
+            return r.json()["stargazers_count"]
+    n = await cached("stars", 3600, fetch)   # 1 小时缓存
+    return ctx.compose(f"⭐{n}")
+```
+
+然后 `"mode": "stars"` 即可。`ctx.compose(s)` = `prefix + separator + s`；想完全自定义就直接返回字符串。
+
+---
+
+## 常见问题
+
+- **没反应？** 名字只在内容变化时更新；`time` 模式分钟变了才会改。看 `journalctl -u tg-profile -f`。
+- **FloodWait？** 把 `update_interval` 调大（120/300）。日志会显示需等待秒数并自动退避。
+- **想停止？** `systemctl stop tg-profile`，或菜单选「停止」。
+
+## License
+MIT

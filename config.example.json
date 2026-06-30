@@ -1,0 +1,23 @@
+{
+  "api_id": 0,
+  "api_hash": "PUT_YOUR_API_HASH_HERE",
+  "session": "tg_profile",
+  "mode": "time",
+  "prefix": "YourName",
+  "separator": " ",
+  "timezone": "Europe/London",
+  "update_interval": 60,
+  "modes": {
+    "time": { "format": "%H:%M" },
+    "datetime": { "format": "%m/%d %H:%M" },
+    "weekday": { "lang": "zh" },
+    "daynight": { "day_emoji": "☀️", "night_emoji": "🌙", "day_start": 6, "night_start": 18, "format": "%H:%M" },
+    "weather": { "lat": 51.5074, "lon": -0.1278, "cache_ttl": 1800 },
+    "system": { "format": "CPU {cpu:.0f}% RAM {ram:.0f}%" },
+    "ping": { "host": "1.1.1.1", "label": "HK" },
+    "crypto": { "symbol": "BTC", "vs": "usd", "cache_ttl": 120 },
+    "countdown": { "target": "2027-01-01", "label": "NewYear" },
+    "holiday": { "dates": { "01-01": "🎆", "12-25": "🎄", "10-31": "🎃", "02-14": "❤️" } },
+    "custom": { "template": "{prefix} {time}", "time_format": "%H:%M", "date_format": "%m/%d" }
+  }
+}

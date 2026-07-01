@@ -8,22 +8,22 @@ from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
 from .config import load_config, save_config
-from .fonts import STYLE_LABELS, STYLE_ORDER, is_known_style, normalize_style, style_example
+from .fonts import STYLE_LABELS, STYLE_ORDER, apply_style, is_known_style, normalize_style, style_example
 from .providers import REGISTRY
 from .ui import banner, console, err, info, ok, section, warn
 
 MODE_DESC = {
-    "time": "实时时间        YourName 09:15",
-    "datetime": "日期 + 时间     YourName 06/30 09:15",
-    "weekday": "星期            YourName 周二",
-    "daynight": "昼夜切换        ☀️ YourName 09:15",
-    "weather": "天气            YourName ☀️28°C",
-    "system": "CPU/RAM        YourName CPU 12% RAM 43%",
-    "ping": "延迟            YourName HK 23ms",
-    "crypto": "币价            YourName BTC 108k",
-    "countdown": "倒计时          YourName NewYear 156D",
-    "holiday": "节日            🎄 YourName",
-    "custom": "自定义模板      template 占位符",
+    "time": ("实时时间", "{prefix}{sep}09:15"),
+    "datetime": ("日期 + 时间", "{prefix}{sep}06/30 09:15"),
+    "weekday": ("星期", "{prefix}{sep}周二"),
+    "daynight": ("昼夜切换", "☀️ {prefix}{sep}09:15"),
+    "weather": ("天气", "{prefix}{sep}☀️28°C"),
+    "system": ("CPU/RAM", "{prefix}{sep}CPU 12% RAM 43%"),
+    "ping": ("延迟", "{prefix}{sep}HK 23ms"),
+    "crypto": ("币价", "{prefix}{sep}BTC 108k"),
+    "countdown": ("倒计时", "{prefix}{sep}NewYear 156D"),
+    "holiday": ("节日", "🎄 {prefix}"),
+    "custom": ("自定义模板", "template 占位符"),
 }
 
 
@@ -73,11 +73,18 @@ def _mode_table(cfg, modes):
     table.add_column("序号", justify="right")
     table.add_column("模式")
     table.add_column("效果示例 / 说明")
+    font_style = normalize_style(cfg.get("font_style", "plain"))
+    prefix = cfg.get("prefix", "") or "YourName"
+    sep = cfg.get("separator", " ")
     for i, m in enumerate(modes, 1):
         current = m == cfg.get("mode")
         mark = "▶" if current else " "
         style = "bold green" if current else None
-        table.add_row(str(i), f"{mark} {m}", MODE_DESC.get(m, ""), style=style)
+        desc, template = MODE_DESC.get(m, ("", ""))
+        sample = template.format(prefix=prefix, sep=sep)
+        if m != "custom":
+            sample = apply_style(sample, font_style)
+        table.add_row(str(i), f"{mark} {m}", f"{desc}        {sample}", style=style)
     console.print(table)
 
 
@@ -158,27 +165,32 @@ def _edit_control(cfg):
 
 
 def _edit_font_style(cfg):
-    table = Table(title="字体样式（会转换前缀和后面的时间/数字）")
-    table.add_column("序号", justify="right")
-    table.add_column("名称")
-    table.add_column("效果")
-    current = normalize_style(cfg.get("font_style", "plain"))
-    for i, style in enumerate(STYLE_ORDER, 1):
-        mark = "▶" if style == current else " "
-        style_name = f"{mark} {style}"
-        row_style = "bold green" if style == current else None
-        table.add_row(str(i), style_name, STYLE_LABELS[style], style=row_style)
-    console.print(table)
-    choice = Prompt.ask("请选择序号或输入样式名", default=current).strip().lower()
-    if choice.isdigit() and 1 <= int(choice) <= len(STYLE_ORDER):
-        selected = STYLE_ORDER[int(choice) - 1]
-    else:
-        if not is_known_style(choice):
-            err(f"未知字体样式: {choice}，可用: {', '.join(STYLE_ORDER)}")
+    while True:
+        table = Table(title="字体样式（会转换前缀和后面的时间/数字）")
+        table.add_column("序号", justify="right")
+        table.add_column("名称")
+        table.add_column("效果")
+        current = normalize_style(cfg.get("font_style", "plain"))
+        for i, style in enumerate(STYLE_ORDER, 1):
+            mark = "▶" if style == current else " "
+            style_name = f"{mark} {style}"
+            row_style = "bold green" if style == current else None
+            table.add_row(str(i), style_name, STYLE_LABELS[style], style=row_style)
+        console.print(table)
+        console.print("  输入序号/样式名切换字体   [bold]b[/bold]. 返回主面板")
+        choice = Prompt.ask("请选择", default=current).strip().lower()
+        if choice == "b":
             return
-        selected = normalize_style(choice)
-    cfg["font_style"] = selected
-    ok(f"字体 → {selected}，示例：{style_example(selected)}")
+        if choice.isdigit() and 1 <= int(choice) <= len(STYLE_ORDER):
+            selected = STYLE_ORDER[int(choice) - 1]
+        else:
+            if not is_known_style(choice):
+                err(f"未知字体样式: {choice}，可用: {', '.join(STYLE_ORDER)}")
+                continue
+            selected = normalize_style(choice)
+        cfg["font_style"] = selected
+        ok(f"字体 → {selected}，示例：{style_example(selected)}")
+        return
 
 
 def _preview(cfg):
@@ -238,7 +250,7 @@ def menu(path):
         if choice == "q":
             save_config(path, cfg)
             ok(f"已保存到 {path}")
-            info("运行: python app.py run   （或重启 systemctl restart tg-profile）")
+            info("正在运行的 app.py run 会在几秒内自动生效，无需手动重启")
             return
         elif choice == "x":
             warn("已放弃修改，未保存")

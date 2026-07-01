@@ -4,6 +4,7 @@
 
 ```
 YourName 09:15        # 时间
+𝓑𝓮𝓪𝓻𝟒𝓯 𝟐𝟏:𝟑𝟐  # 花体昵称 + 花体数字
 ☀️ YourName 09:15      # 白天/夜晚
 YourName ☀️28°C        # 天气
 YourName BTC 108k      # 币价
@@ -50,7 +51,7 @@ cd ~/tg-dynamic-profile
 .venv/bin/python app.py menu
 ```
 
-全是数字/字母选项，1、2、3 选就行：切模式、改前缀、改分隔符、改刷新间隔、改时区、改当前模式的参数（比如天气的经纬度）、实时预览效果，改完 `q` 保存。**保存后几秒内，正在运行的 `app.py run` 会自动检测到 `config.json` 变化并重新加载**，不需要手动重启进程、也不需要在 Telegram 里操作。
+全是数字/字母选项，1、2、3 选就行：切模式、改前缀、改字体、改分隔符、改刷新间隔、改时区、改当前模式的参数（比如天气的经纬度）、实时预览效果，改完 `q` 保存。**保存后几秒内，正在运行的 `app.py run` 会自动检测到 `config.json` 变化并重新加载**，不需要手动重启进程、也不需要在 Telegram 里操作。
 
 如果是用 systemd 常驻的，菜单改完不用 `systemctl restart`，等几秒生效即可；只有改 `api_id`/`api_hash`/`session` 这类需要重新登录的项才需要重启。
 
@@ -80,6 +81,7 @@ cd ~/tg-dynamic-profile
 ```
 .mode weather      切换模式
 .prefix Bob        改前缀
+.font script       改字体样式（前缀和后面的时间数字都会转换）
 .interval 120      改刷新间隔(秒)
 .sep  |            改分隔符
 .tz Asia/Shanghai  改时区
@@ -162,6 +164,7 @@ python app.py menu         # 交互菜单：切换模式 / 改前缀 / 改间隔
 
 - **m 编辑当前模式参数**：直接改 `weather` 的经纬度、`crypto` 的币种、`countdown` 的目标日期等，无需手动改 JSON。
 - **c 控制面板设置**：改触发表情 / 命令前缀 / 生效对话 / 启停，不用再手动改 `config.json` 的 `control` 段。
+- **f 改字体样式**：把昵称和动态数字转换成粗体、花体、等宽、全角等 Unicode 样式。
 - **v 预览当前效果**：立即按当前配置渲染一次昵称，改完参数直接看到实际效果，出错也会用中文提示。
 - **x 不保存退出**：改错了可以直接放弃，不会污染 `config.json`。
 
@@ -192,6 +195,7 @@ journalctl -u tg-profile -f   # 看实时日志
   "mode": "time",                 // 当前生效的模式
   "prefix": "YourName",             // 名字主体
   "separator": " ",               // 前缀与内容之间的分隔符，可用 " | "、"｜"
+  "font_style": "plain",          // 字体样式：plain/bold/bold_italic/script/fraktur/sans/monospace/fullwidth
   "timezone": "Europe/London",      // 时区
   "update_interval": 60,          // 刷新间隔（秒），建议 >= 60
   "modes": {                      // 各模式的参数
@@ -211,6 +215,23 @@ journalctl -u tg-profile -f   # 看实时日志
 ```
 
 切换模式只需改 `"mode"` 字段（或用 `python app.py menu`），无需改代码。
+
+### 字体样式 / 花体数字
+
+Telegram 这里的“字体”本质是 Unicode 字符转换。SSH 里运行 `emoji` 或 `python app.py menu`，按 `f` 就能选择：
+
+| font_style | 示例 |
+|------------|------|
+| `plain` | `Bear4f 21:32` |
+| `bold` | `𝐁𝐞𝐚𝐫𝟒𝐟 𝟐𝟏:𝟑𝟐` |
+| `bold_italic` | `𝑩𝒆𝒂𝒓𝟒𝒇 𝟐𝟏:𝟑𝟐` |
+| `script` | `𝓑𝓮𝓪𝓻𝟒𝓯 𝟐𝟏:𝟑𝟐` |
+| `fraktur` | `𝕭𝖊𝖆𝖗𝟜𝖋 𝟚𝟙:𝟛𝟚` |
+| `sans` | `𝖡𝖾𝖺𝗋𝟦𝖿 𝟤𝟣:𝟥𝟤` |
+| `monospace` | `𝙱𝚎𝚊𝚛𝟺𝚏 𝟸𝟷:𝟹𝟸` |
+| `fullwidth` | `Ｂｅａｒ４ｆ　２１：３２` |
+
+数字会跟随样式一起转换，所以 `time` / `datetime` / `daynight` 里的时间也会变成花体数字。Telegram 的 `@username` 仍然只能用英文、数字和下划线；这里改的是昵称 `first_name`。
 
 ---
 

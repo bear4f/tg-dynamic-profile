@@ -54,6 +54,11 @@ cd ~/tg-dynamic-profile
 
 如果是用 systemd 常驻的，菜单改完不用 `systemctl restart`，等几秒生效即可；只有改 `api_id`/`api_hash`/`session` 这类需要重新登录的项才需要重启。
 
+> **快捷方式**：`deploy.sh` / `install.sh` 装好后会自动往 `~/.bashrc` 加一条 `emoji` 命令别名。新开一个终端窗口，直接敲 `emoji`（`source ~/.bashrc` 或重新登录终端后生效）就能秒开这个交互菜单，不用记路径也不用敲完整命令。已经部署过的实例手动加一行也一样：
+> ```bash
+> echo "alias emoji='cd ~/tg-dynamic-profile && .venv/bin/python app.py menu'" >> ~/.bashrc && source ~/.bashrc
+> ```
+
 ---
 
 ## 📱（可选）Telegram 收藏夹面板

@@ -57,7 +57,7 @@ async def mode_daynight(ctx):
     is_day = o.get("day_start", 6) <= h < o.get("night_start", 18)
     emoji = o.get("day_emoji", "☀️") if is_day else o.get("night_emoji", "🌙")
     t = ctx.now.strftime(o.get("format", "%H:%M"))
-    return f"{emoji} {ctx.prefix}{ctx.separator}{t}"
+    return ctx.stylize(f"{emoji} {ctx.prefix}{ctx.separator}{t}")
 
 
 # --------------------------------------------------------------------------
@@ -189,7 +189,8 @@ async def mode_countdown(ctx):
 async def mode_holiday(ctx):
     dates = ctx.opts.get("dates", {"01-01": "🎆", "12-25": "🎄", "10-31": "🎃"})
     emoji = dates.get(ctx.now.strftime("%m-%d"))
-    return f"{emoji} {ctx.prefix}" if emoji else ctx.prefix
+    name = f"{emoji} {ctx.prefix}" if emoji else ctx.prefix
+    return ctx.stylize(name)
 
 
 # --------------------------------------------------------------------------
@@ -198,9 +199,10 @@ async def mode_holiday(ctx):
 @provider("custom")
 async def mode_custom(ctx):
     o = ctx.opts
-    return o.get("template", "{prefix} {time}").format(
+    name = o.get("template", "{prefix} {time}").format(
         prefix=ctx.prefix,
         sep=ctx.separator,
         time=ctx.now.strftime(o.get("time_format", "%H:%M")),
         date=ctx.now.strftime(o.get("date_format", "%m/%d")),
     )
+    return ctx.stylize(name)

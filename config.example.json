@@ -5,6 +5,7 @@
   "mode": "time",
   "prefix": "YourName",
   "separator": " ",
+  "font_style": "plain",
   "timezone": "Europe/London",
   "update_interval": 60,
   "control": { "enabled": false, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" },

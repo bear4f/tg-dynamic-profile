@@ -8,6 +8,7 @@ from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
 from .config import load_config, save_config
+from .fonts import STYLE_LABELS, STYLE_ORDER, is_known_style, normalize_style, style_example
 from .providers import REGISTRY
 from .ui import banner, console, err, info, ok, section, warn
 
@@ -58,6 +59,7 @@ def _status_panel(cfg):
         f"模式 mode        [bold]{cfg.get('mode')}[/bold]",
         f"前缀 prefix      [bold]{cfg.get('prefix', '')}[/bold]",
         f"分隔符 separator '{cfg.get('separator', ' ')}'",
+        f"字体 font        [bold]{normalize_style(cfg.get('font_style', 'plain'))}[/bold]",
         f"刷新间隔 interval {cfg.get('update_interval', 60)}s",
         f"时区 timezone    {cfg.get('timezone', 'UTC')}",
         f"控制面板         {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}"
@@ -155,6 +157,30 @@ def _edit_control(cfg):
             err("无效选择")
 
 
+def _edit_font_style(cfg):
+    table = Table(title="字体样式（会转换前缀和后面的时间/数字）")
+    table.add_column("序号", justify="right")
+    table.add_column("名称")
+    table.add_column("效果")
+    current = normalize_style(cfg.get("font_style", "plain"))
+    for i, style in enumerate(STYLE_ORDER, 1):
+        mark = "▶" if style == current else " "
+        style_name = f"{mark} {style}"
+        row_style = "bold green" if style == current else None
+        table.add_row(str(i), style_name, STYLE_LABELS[style], style=row_style)
+    console.print(table)
+    choice = Prompt.ask("请选择序号或输入样式名", default=current).strip().lower()
+    if choice.isdigit() and 1 <= int(choice) <= len(STYLE_ORDER):
+        selected = STYLE_ORDER[int(choice) - 1]
+    else:
+        if not is_known_style(choice):
+            err(f"未知字体样式: {choice}，可用: {', '.join(STYLE_ORDER)}")
+            return
+        selected = normalize_style(choice)
+    cfg["font_style"] = selected
+    ok(f"字体 → {selected}，示例：{style_example(selected)}")
+
+
 def _preview(cfg):
     mode = cfg.get("mode")
     fn = REGISTRY.get(mode)
@@ -170,7 +196,13 @@ def _preview(cfg):
 
     from .runner import Ctx  # 延迟导入，避免 menu 无关命令也加载 telethon
     opts = cfg.get("modes", {}).get(mode, {})
-    ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
+    ctx = Ctx(
+        now,
+        cfg.get("prefix", ""),
+        cfg.get("separator", " "),
+        opts,
+        normalize_style(cfg.get("font_style", "plain")),
+    )
     try:
         name = asyncio.run(fn(ctx))
         console.print(Panel(f"[bold green]{name}[/bold green]",
@@ -194,8 +226,9 @@ def menu(path):
         console.print(
             "\n"
             "  [bold]p[/bold]. 改前缀 prefix        [bold]s[/bold]. 改分隔符 separator\n"
-            "  [bold]i[/bold]. 改刷新间隔 interval   [bold]t[/bold]. 改时区 timezone\n"
-            "  [bold]m[/bold]. 编辑当前模式参数      [bold]c[/bold]. 控制面板设置\n"
+            "  [bold]f[/bold]. 改字体 font          [bold]i[/bold]. 改刷新间隔 interval\n"
+            "  [bold]t[/bold]. 改时区 timezone      [bold]m[/bold]. 编辑当前模式参数\n"
+            "  [bold]c[/bold]. 控制面板设置\n"
             "  [bold]v[/bold]. 预览当前效果          [bold]q[/bold]. 保存并退出\n"
             "                                    [bold]x[/bold]. 不保存退出\n"
         )
@@ -215,6 +248,8 @@ def menu(path):
         elif choice == "s":
             cfg["separator"] = Prompt.ask("新分隔符（例如空格、' | '、'｜'）",
                                           default=cfg.get("separator", " "))
+        elif choice == "f":
+            _edit_font_style(cfg)
         elif choice == "i":
             cfg["update_interval"] = max(10, IntPrompt.ask(
                 "刷新间隔（秒，最小 10，建议 ≥60 避免限流）",

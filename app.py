@@ -17,6 +17,7 @@ from rich.prompt import Confirm, Prompt
 
 from tgprofile.client import build_client
 from tgprofile.config import load_config, save_config
+from tgprofile.fonts import STYLE_LABELS, STYLE_ORDER, normalize_style
 from tgprofile.menu import menu
 from tgprofile.providers import REGISTRY
 from tgprofile.runner import run_loop
@@ -69,6 +70,14 @@ def _ask_timezone(default):
             err(f"无效时区 '{tz}'，示例: Asia/Shanghai / Europe/London / UTC")
 
 
+def _ask_font_style(default):
+    console.print("字体样式:")
+    for style in STYLE_ORDER:
+        console.print(f"  {style:<11} {STYLE_LABELS[style]}")
+    raw = Prompt.ask("字体", default=default).strip()
+    return normalize_style(raw)
+
+
 def cmd_setup(args):
     """一键式部署向导：填凭证 -> 登录 -> 选模式，全程中文引导。"""
     banner("Telegram Dynamic Profile · 部署向导", "Debian/Ubuntu VPS 一步到位")
@@ -87,6 +96,7 @@ def cmd_setup(args):
 
         section("2) 昵称设置")
         cfg["prefix"] = Prompt.ask("前缀（名字主体）", default=cfg["prefix"]).strip() or cfg["prefix"]
+        cfg["font_style"] = _ask_font_style(cfg.get("font_style", "plain"))
         cfg["mode"] = _ask_mode(cfg["mode"])
         cfg["timezone"] = _ask_timezone(cfg["timezone"])
 

@@ -8,6 +8,7 @@ DEFAULTS = {
     "mode": "time",
     "prefix": "",
     "separator": " ",
+    "font_style": "plain",
     "timezone": "UTC",
     "update_interval": 60,
     "modes": {},

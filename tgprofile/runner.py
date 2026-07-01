@@ -42,6 +42,7 @@ class State:
     config_path: str
     paused: bool = False
     last_name: Optional[str] = None
+    last_set_at: Optional[float] = None
     poke: Optional[asyncio.Event] = field(default=None)
 
     def wake(self):
@@ -92,6 +93,7 @@ async def _updater(client, state):
                         # 程序的 bug，只是之前没把这个差异打到日志里，看起来就很随机。
                         confirmed = getattr(result, "first_name", None) or name
                         state.last_name = confirmed
+                        state.last_set_at = time_module.time()
                         if confirmed != name:
                             log.warning(
                                 "name -> %s（⚠️ Telegram 服务器把它还原成了 %s，"
@@ -116,6 +118,33 @@ async def _updater(client, state):
             last = None
         except asyncio.TimeoutError:
             pass
+
+
+async def _self_check(client, state, interval=15):
+    """定期主动重新查询 Telegram 上现在真正存的名字。
+
+    实测发现：调用 account.updateProfile 那一刻的回包会确认花体字符已经被接受，
+    但过一段时间后 Telegram 会在后台悄悄把它异步还原成普通字母——只看更新那一刻
+    的回包完全发现不了这种"延迟生效"的还原。这里独立于更新循环，定期主动问一次
+    服务器现在到底是什么，才能抓到这种事后被改的情况，并记录大概过了多久发生。
+    """
+    while True:
+        await asyncio.sleep(interval)
+        if not state.last_name:
+            continue
+        try:
+            me = await client.get_me()
+        except Exception as e:
+            log.debug("self-check get_me failed: %s", e)
+            continue
+        if me.first_name != state.last_name:
+            elapsed = time_module.time() - (state.last_set_at or time_module.time())
+            log.warning(
+                "自检发现昵称被后台改成了 %s（原来是 %s，设置后约 %.0f 秒发生，"
+                "推测是 Telegram 异步还原花体字符，不是本程序改的）",
+                me.first_name, state.last_name, elapsed)
+            state.last_name = me.first_name
+            state.last_set_at = time_module.time()
 
 
 async def _config_watcher(state, interval=3):
@@ -178,4 +207,5 @@ async def run_loop(config_path):
 
     client.loop.create_task(_updater(client, state))
     client.loop.create_task(_config_watcher(state))
+    client.loop.create_task(_self_check(client, state))
     await client.run_until_disconnected()

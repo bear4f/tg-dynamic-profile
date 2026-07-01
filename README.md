@@ -4,7 +4,7 @@
 
 ```
 YourName 09:15        # 时间
-𝓑𝓮𝓪𝓻𝟒𝓯 𝟐𝟏:𝟑𝟐  # 花体昵称 + 花体数字
+𝓨𝓸𝓾𝓻𝓝𝓪𝓶𝓮 𝟐𝟏:𝟑𝟐  # 花体昵称 + 花体数字
 ☀️ YourName 09:15      # 白天/夜晚
 YourName ☀️28°C        # 天气
 YourName BTC 108k      # 币价
@@ -29,7 +29,7 @@ YourName NewYear 156D  # 倒计时
 一条命令拉起交互式安装向导（克隆 → 建 venv → 装依赖 → 引导填凭证、登录、选模式）：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/bear4f/tg-dynamic-profile/main/deploy.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USER/tg-dynamic-profile/main/deploy.sh)
 ```
 
 向导跑完后：
@@ -93,7 +93,7 @@ cd ~/tg-dynamic-profile
 `trigger` 可以是单个字符串，也可以是字符串数组（同时支持多个别名，如中文+英文，甚至换成表情）。
 
 > 仅在 `chat`（默认你自己的收藏夹）里的**你本人发出**的消息才会被识别，不会影响普通聊天。
-> `.update` 只会在项目目录执行 `git pull --ff-only`。如果拉到了新的 Python 代码，需要重启当前进程或运行 `systemctl restart tg-profile` 后才会加载新代码。
+> `.update` 只会在项目目录执行 `git pull --ff-only`。如果拉到了新的 Python 代码，未安装 systemd 服务时请重启当前进程；已安装服务时运行 `systemctl restart tg-profile` 后才会加载新代码。
 
 ---
 
@@ -124,7 +124,7 @@ cd ~/tg-dynamic-profile
 
 ### 2. 部署
 ```bash
-git clone https://github.com/bear4f/tg-dynamic-profile.git
+git clone https://github.com/YOUR_GITHUB_USER/tg-dynamic-profile.git
 cd tg-dynamic-profile
 
 python3 -m venv .venv
@@ -224,14 +224,14 @@ Telegram 这里的“字体”本质是 Unicode 字符转换。SSH 里运行 `em
 
 | font_style | 示例 |
 |------------|------|
-| `plain` | `Bear4f 21:32` |
-| `bold` | `𝐁𝐞𝐚𝐫𝟒𝐟 𝟐𝟏:𝟑𝟐` |
-| `bold_italic` | `𝑩𝒆𝒂𝒓𝟒𝒇 𝟐𝟏:𝟑𝟐` |
-| `script` | `𝓑𝓮𝓪𝓻𝟒𝓯 𝟐𝟏:𝟑𝟐` |
-| `fraktur` | `𝕭𝖊𝖆𝖗𝟜𝖋 𝟚𝟙:𝟛𝟚` |
-| `sans` | `𝖡𝖾𝖺𝗋𝟦𝖿 𝟤𝟣:𝟥𝟤` |
-| `monospace` | `𝙱𝚎𝚊𝚛𝟺𝚏 𝟸𝟷:𝟹𝟸` |
-| `fullwidth` | `Ｂｅａｒ４ｆ　２１：３２` |
+| `plain` | `YourName 21:32` |
+| `bold` | `𝐘𝐨𝐮𝐫𝐍𝐚𝐦𝐞 𝟐𝟏:𝟑𝟐` |
+| `bold_italic` | `𝒀𝒐𝒖𝒓𝑵𝒂𝒎𝒆 𝟐𝟏:𝟑𝟐` |
+| `script` | `𝓨𝓸𝓾𝓻𝓝𝓪𝓶𝓮 𝟐𝟏:𝟑𝟐` |
+| `fraktur` | `𝖄𝖔𝖚𝖗𝕹𝖆𝖒𝖊 𝟚𝟙:𝟛𝟚` |
+| `sans` | `𝖸𝗈𝗎𝗋𝖭𝖺𝗆𝖾 𝟤𝟣:𝟥𝟤` |
+| `monospace` | `𝚈𝚘𝚞𝚛𝙽𝚊𝚖𝚎 𝟸𝟷:𝟹𝟸` |
+| `fullwidth` | `ＹｏｕｒＮａｍｅ　２１：３２` |
 
 数字会跟随样式一起转换，所以 `time` / `datetime` / `daynight` 里的时间也会变成花体数字。Telegram 的 `@username` 仍然只能用英文、数字和下划线；这里改的是昵称 `first_name`。
 

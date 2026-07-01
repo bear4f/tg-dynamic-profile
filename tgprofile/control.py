@@ -13,6 +13,7 @@ import logging
 
 from telethon import events
 
+from .fonts import STYLE_ORDER, is_known_style, normalize_style, style_example
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
@@ -34,6 +35,7 @@ def _status(state):
     return (f"{flag} | mode=<b>{c['mode']}</b> "
             f"prefix=<b>{c.get('prefix', '')}</b> "
             f"sep='{c.get('separator', ' ')}' "
+            f"font=<b>{normalize_style(c.get('font_style', 'plain'))}</b> "
             f"interval={c.get('update_interval', 60)}s "
             f"tz={c.get('timezone', 'UTC')}")
 
@@ -46,6 +48,7 @@ def _panel(state, cprefix, triggers):
         "在本对话直接发送命令修改：\n"
         f"• <code>{cprefix}mode &lt;名称&gt;</code> 切换模式\n"
         f"• <code>{cprefix}prefix &lt;文本&gt;</code> 改前缀\n"
+        f"• <code>{cprefix}font &lt;样式&gt;</code> 改字体（plain/script/bold/monospace...）\n"
         f"• <code>{cprefix}interval &lt;秒&gt;</code> 改刷新间隔\n"
         f"• <code>{cprefix}sep &lt;字符&gt;</code> 改分隔符\n"
         f"• <code>{cprefix}tz &lt;时区&gt;</code> 改时区\n"
@@ -114,6 +117,17 @@ def register_control(client, state):
             _persist(state, prefix=arg)
             state.wake()
             await reply(f"✅ 前缀 → <b>{arg}</b>")
+        elif cmd == "font":
+            if not is_known_style(arg):
+                await reply(
+                    "❌ 未知字体样式: "
+                    f"{arg}\n可用: {', '.join(STYLE_ORDER)}"
+                )
+                return
+            style = normalize_style(arg)
+            _persist(state, font_style=style)
+            state.wake()
+            await reply(f"✅ 字体 → <b>{style}</b>\n示例: <code>{style_example(style)}</code>")
         elif cmd == "sep":
             _persist(state, separator=arg or " ")
             state.wake()

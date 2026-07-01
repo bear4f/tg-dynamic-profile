@@ -13,6 +13,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 from .client import build_client
 from .config import load_config
 from .control import DEFAULT_TRIGGERS, _normalize_triggers, register_control
+from .fonts import apply_style, normalize_style
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
@@ -25,9 +26,13 @@ class Ctx:
     prefix: str
     separator: str
     opts: dict
+    font_style: str = "plain"
 
     def compose(self, body):
-        return f"{self.prefix}{self.separator}{body}"
+        return self.stylize(f"{self.prefix}{self.separator}{body}")
+
+    def stylize(self, text):
+        return apply_style(text, self.font_style)
 
 
 @dataclass
@@ -58,7 +63,13 @@ async def _updater(client, state):
                 else:
                     now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
                     opts = cfg.get("modes", {}).get(mode, {})
-                    ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
+                    ctx = Ctx(
+                        now,
+                        cfg.get("prefix", ""),
+                        cfg.get("separator", " "),
+                        opts,
+                        normalize_style(cfg.get("font_style", "plain")),
+                    )
                     name = (await fn(ctx))[:NAME_MAX]
                     if name != last:
                         await client(UpdateProfileRequest(first_name=name))

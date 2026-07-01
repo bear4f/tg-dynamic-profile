@@ -29,7 +29,7 @@ YourName NewYear 156D  # 倒计时
 一条命令拉起交互式安装向导（克隆 → 建 venv → 装依赖 → 引导填凭证、登录、选模式）：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USER/tg-dynamic-profile/main/deploy.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/bear4f/tg-dynamic-profile/main/deploy.sh)
 ```
 
 向导跑完后：

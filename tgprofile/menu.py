@@ -238,7 +238,7 @@ def menu(path):
         if choice == "q":
             save_config(path, cfg)
             ok(f"已保存到 {path}")
-            info("运行: python app.py run   （或重启 systemctl restart tg-profile）")
+            info("未安装 systemd 服务时运行: python app.py run；已安装服务时再用: systemctl restart tg-profile")
             return
         elif choice == "x":
             warn("已放弃修改，未保存")

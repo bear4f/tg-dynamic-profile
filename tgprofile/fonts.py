@@ -7,14 +7,14 @@ ASCII letters and digits to Unicode look-alike characters instead.
 from string import ascii_lowercase, ascii_uppercase, digits
 
 STYLE_LABELS = {
-    "plain": "普通 Bear4f 21:32",
-    "bold": "粗体 𝐁𝐞𝐚𝐫𝟒𝐟 𝟐𝟏:𝟑𝟐",
-    "bold_italic": "粗斜体 𝑩𝒆𝒂𝒓𝟒𝒇 𝟐𝟏:𝟑𝟐",
-    "script": "花体 𝓑𝓮𝓪𝓻𝟒𝓯 𝟐𝟏:𝟑𝟐",
-    "fraktur": "哥特 𝕭𝖊𝖆𝖗𝟜𝖋 𝟚𝟙:𝟛𝟚",
-    "sans": "无衬线 𝖡𝖾𝖺𝗋𝟦𝖿 𝟤𝟣:𝟥𝟤",
-    "monospace": "等宽 𝙱𝚎𝚊𝚛𝟺𝚏 𝟸𝟷:𝟹𝟸",
-    "fullwidth": "全角 Ｂｅａｒ４ｆ　２１：３２",
+    "plain": "普通 YourName 21:32",
+    "bold": "粗体 𝐘𝐨𝐮𝐫𝐍𝐚𝐦𝐞 𝟐𝟏:𝟑𝟐",
+    "bold_italic": "粗斜体 𝒀𝒐𝒖𝒓𝑵𝒂𝒎𝒆 𝟐𝟏:𝟑𝟐",
+    "script": "花体 𝓨𝓸𝓾𝓻𝓝𝓪𝓶𝓮 𝟐𝟏:𝟑𝟐",
+    "fraktur": "哥特 𝖄𝖔𝖚𝖗𝕹𝖆𝖒𝖊 𝟚𝟙:𝟛𝟚",
+    "sans": "无衬线 𝖸𝗈𝗎𝗋𝖭𝖺𝗆𝖾 𝟤𝟣:𝟥𝟤",
+    "monospace": "等宽 𝚈𝚘𝚞𝚛𝙽𝚊𝚖𝚎 𝟸𝟷:𝟹𝟸",
+    "fullwidth": "全角 ＹｏｕｒＮａｍｅ　２１：３２",
 }
 
 STYLE_ORDER = tuple(STYLE_LABELS)
@@ -78,5 +78,5 @@ def apply_style(text, style):
     return "".join(table.get(ch, ch) for ch in str(text))
 
 
-def style_example(style, text="Bear4f 21:32"):
+def style_example(style, text="YourName 21:32"):
     return apply_style(text, style)

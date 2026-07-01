@@ -23,8 +23,8 @@ def load_config(path):
     merged["api_hash"] = os.environ.get("TG_API_HASH", merged.get("api_hash") or "")
     if not merged["api_id"] or not merged["api_hash"]:
         raise SystemExit(
-            "Missing api_id/api_hash. Set them in config.json or via "
-            "TG_API_ID / TG_API_HASH env vars (get them at https://my.telegram.org)."
+            "缺少 api_id/api_hash。请在 config.json 中填写，或通过 "
+            "TG_API_ID / TG_API_HASH 环境变量提供（前往 https://my.telegram.org 获取）。"
         )
     return merged
 

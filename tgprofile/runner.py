@@ -84,12 +84,12 @@ async def run_loop(config_path):
     cfg = load_config(config_path)
     if cfg["mode"] not in REGISTRY:
         raise SystemExit(
-            f"Unknown mode '{cfg['mode']}'. Available: {', '.join(sorted(REGISTRY))}")
+            f"未知模式 '{cfg['mode']}'。可用模式: {', '.join(sorted(REGISTRY))}")
 
     client = build_client(cfg)
     await client.connect()
     if not await client.is_user_authorized():
-        raise SystemExit("Not authorized. Run `python app.py login` first.")
+        raise SystemExit("尚未登录，请先运行 `python app.py login`。")
 
     me = await client.get_me()
     state = State(cfg=cfg, config_path=config_path, poke=asyncio.Event())

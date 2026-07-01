@@ -131,8 +131,15 @@ python app.py login
 ### 4. 运行
 ```bash
 python app.py run          # 前台运行
-python app.py menu         # 交互菜单：切换模式 / 改前缀 / 改间隔
+python app.py menu         # 交互菜单：切换模式 / 改前缀 / 改间隔 / 改参数 / 实时预览
 ```
+
+`setup` 向导与 `menu` 交互菜单都基于 [rich](https://github.com/Textualize/rich) 渲染，在 Debian/Ubuntu 终端下有彩色分区、表格化的模式列表和输入校验（api_id/api_hash/时区非法会当场提示重填，不会写坏配置）。`menu` 里新增：
+
+- **m 编辑当前模式参数**：直接改 `weather` 的经纬度、`crypto` 的币种、`countdown` 的目标日期等，无需手动改 JSON。
+- **c 控制面板设置**：改触发表情 / 命令前缀 / 生效对话 / 启停，不用再手动改 `config.json` 的 `control` 段。
+- **v 预览当前效果**：立即按当前配置渲染一次昵称，改完参数直接看到实际效果，出错也会用中文提示。
+- **x 不保存退出**：改错了可以直接放弃，不会污染 `config.json`。
 
 ---
 

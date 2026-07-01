@@ -1,7 +1,15 @@
+import asyncio
 import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from rich.panel import Panel
+from rich.prompt import IntPrompt, Prompt
+from rich.table import Table
 
 from .config import load_config, save_config
 from .providers import REGISTRY
+from .ui import banner, console, err, info, ok, section, warn
 
 MODE_DESC = {
     "time": "实时时间        YourName 09:15",
@@ -23,44 +31,196 @@ def _load_raw(path):
         return json.load(f)
 
 
+def _valid_tz(tz):
+    try:
+        ZoneInfo(tz)
+        return True
+    except Exception:
+        return False
+
+
+def _parse_value(raw):
+    """尽量按 JSON 解析（数字/布尔/字符串），失败则原样存为字符串。"""
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return raw
+
+
+def _status_panel(cfg):
+    ctrl = cfg.get("control") or {}
+    lines = [
+        f"模式 mode        [bold]{cfg.get('mode')}[/bold]",
+        f"前缀 prefix      [bold]{cfg.get('prefix', '')}[/bold]",
+        f"分隔符 separator '{cfg.get('separator', ' ')}'",
+        f"刷新间隔 interval {cfg.get('update_interval', 60)}s",
+        f"时区 timezone    {cfg.get('timezone', 'UTC')}",
+        f"控制面板         {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}"
+        f"（触发词 {ctrl.get('trigger', '⚙️')} / 命令前缀 '{ctrl.get('prefix', '.')}'）",
+    ]
+    console.print(Panel("\n".join(lines), title="当前配置", border_style="blue", expand=False))
+
+
+def _mode_table(cfg, modes):
+    table = Table(title="可用模式（输入序号可直接切换）")
+    table.add_column("序号", justify="right")
+    table.add_column("模式")
+    table.add_column("效果示例 / 说明")
+    for i, m in enumerate(modes, 1):
+        current = m == cfg.get("mode")
+        mark = "▶" if current else " "
+        style = "bold green" if current else None
+        table.add_row(str(i), f"{mark} {m}", MODE_DESC.get(m, ""), style=style)
+    console.print(table)
+
+
+def _edit_mode_params(cfg, mode):
+    opts = cfg.setdefault("modes", {}).setdefault(mode, {})
+    while True:
+        console.print()
+        keys = list(opts)
+        if keys:
+            table = Table(title=f"模式参数 · {mode}")
+            table.add_column("序号", justify="right")
+            table.add_column("参数名")
+            table.add_column("当前值")
+            for i, k in enumerate(keys, 1):
+                table.add_row(str(i), k, json.dumps(opts[k], ensure_ascii=False))
+            console.print(table)
+        else:
+            console.print(f"[dim](模式 '{mode}' 暂无参数，可新增)[/dim]")
+
+        console.print("  输入序号修改参数   [bold]n[/bold]. 新增参数   [bold]b[/bold]. 返回上级菜单")
+        choice = Prompt.ask("请选择").strip().lower()
+
+        if choice == "b":
+            return
+        elif choice == "n":
+            key = Prompt.ask("新参数名").strip()
+            if not key:
+                err("参数名不能为空")
+                continue
+            raw = Prompt.ask("参数值（支持 JSON，如数字/true/false，普通文本直接输入即可）")
+            opts[key] = _parse_value(raw)
+            ok(f"已新增 {key} = {opts[key]!r}")
+        elif choice.isdigit() and 1 <= int(choice) <= len(keys):
+            k = keys[int(choice) - 1]
+            raw = Prompt.ask(f"{k} 新值（回车保持不变）",
+                              default=json.dumps(opts[k], ensure_ascii=False))
+            opts[k] = _parse_value(raw)
+            ok(f"{k} → {opts[k]!r}")
+        else:
+            err("无效选择")
+
+
+def _edit_control(cfg):
+    ctrl = cfg.setdefault("control", {"enabled": True, "trigger": "⚙️", "prefix": ".", "chat": "me"})
+    while True:
+        console.print()
+        console.print(Panel(
+            f"启用状态   {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}\n"
+            f"触发表情   {ctrl.get('trigger', '⚙️')}\n"
+            f"命令前缀   {ctrl.get('prefix', '.')}\n"
+            f"生效对话   {ctrl.get('chat', 'me')}（me = 收藏夹，只识别你本人发出的消息）",
+            title="控制面板设置", border_style="magenta"))
+        console.print(
+            "  1. 切换启用/停用   2. 改触发表情   3. 改命令前缀   4. 改生效对话   b. 返回")
+        choice = Prompt.ask("请选择").strip().lower()
+
+        if choice == "b":
+            return
+        elif choice == "1":
+            ctrl["enabled"] = not ctrl.get("enabled", True)
+            ok("已切换" if ctrl["enabled"] else "已停用")
+        elif choice == "2":
+            ctrl["trigger"] = Prompt.ask("新触发表情", default=ctrl.get("trigger", "⚙️"))
+        elif choice == "3":
+            ctrl["prefix"] = Prompt.ask("新命令前缀", default=ctrl.get("prefix", "."))
+        elif choice == "4":
+            ctrl["chat"] = Prompt.ask("新生效对话（默认 me = 收藏夹）", default=ctrl.get("chat", "me"))
+        else:
+            err("无效选择")
+
+
+def _preview(cfg):
+    mode = cfg.get("mode")
+    fn = REGISTRY.get(mode)
+    if fn is None:
+        err(f"未知模式: {mode}")
+        return
+
+    tz = cfg.get("timezone", "UTC")
+    if not _valid_tz(tz):
+        warn(f"时区 '{tz}' 无效，已用 UTC 预览")
+        tz = "UTC"
+    now = datetime.now(ZoneInfo(tz))
+
+    from .runner import Ctx  # 延迟导入，避免 menu 无关命令也加载 telethon
+    opts = cfg.get("modes", {}).get(mode, {})
+    ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
+    try:
+        name = asyncio.run(fn(ctx))
+        console.print(Panel(f"[bold green]{name}[/bold green]",
+                             title="预览效果（当前会实际显示的昵称）", border_style="green"))
+    except Exception as e:
+        err(f"预览失败: {e}")
+
+
 def menu(path):
     # load_config validates secrets; for menu we edit the raw file
     load_config(path)  # fail fast if api creds missing
     cfg = _load_raw(path)
     modes = sorted(REGISTRY)
 
-    while True:
-        print("\n" + "=" * 38)
-        print(" Telegram Dynamic Profile")
-        print("=" * 38)
-        print(f" 当前: mode={cfg.get('mode')}  prefix={cfg.get('prefix')}"
-              f"  interval={cfg.get('update_interval')}s\n")
-        for i, m in enumerate(modes, 1):
-            mark = "▶" if m == cfg.get("mode") else " "
-            print(f" {mark}{i:>2}. {m:<10} {MODE_DESC.get(m, '')}")
-        print("\n  p. 改前缀 prefix")
-        print("  s. 改分隔符 separator")
-        print("  i. 改刷新间隔 interval")
-        print("  q. 保存并退出")
+    banner("Telegram Dynamic Profile · 控制菜单", "改动仅在选择『保存并退出』时写入 config.json")
 
-        choice = input("\n请选择: ").strip().lower()
+    while True:
+        section("当前状态")
+        _status_panel(cfg)
+        _mode_table(cfg, modes)
+        console.print(
+            "\n"
+            "  [bold]p[/bold]. 改前缀 prefix        [bold]s[/bold]. 改分隔符 separator\n"
+            "  [bold]i[/bold]. 改刷新间隔 interval   [bold]t[/bold]. 改时区 timezone\n"
+            "  [bold]m[/bold]. 编辑当前模式参数      [bold]c[/bold]. 控制面板设置\n"
+            "  [bold]v[/bold]. 预览当前效果          [bold]q[/bold]. 保存并退出\n"
+            "                                    [bold]x[/bold]. 不保存退出\n"
+        )
+
+        choice = Prompt.ask("请选择").strip().lower()
 
         if choice == "q":
             save_config(path, cfg)
-            print("已保存到", path)
-            print("运行: python app.py run   （或重启 systemctl restart tg-profile）")
+            ok(f"已保存到 {path}")
+            info("运行: python app.py run   （或重启 systemctl restart tg-profile）")
+            return
+        elif choice == "x":
+            warn("已放弃修改，未保存")
             return
         elif choice == "p":
-            cfg["prefix"] = input("新前缀: ").strip()
+            cfg["prefix"] = Prompt.ask("新前缀", default=cfg.get("prefix", ""))
         elif choice == "s":
-            cfg["separator"] = input("新分隔符(例如 ' '、' | '、'｜'): ")
+            cfg["separator"] = Prompt.ask("新分隔符（例如空格、' | '、'｜'）",
+                                          default=cfg.get("separator", " "))
         elif choice == "i":
-            try:
-                cfg["update_interval"] = max(10, int(input("间隔(秒): ").strip()))
-            except ValueError:
-                print("无效数字")
+            cfg["update_interval"] = max(10, IntPrompt.ask(
+                "刷新间隔（秒，最小 10，建议 ≥60 避免限流）",
+                default=cfg.get("update_interval", 60)))
+        elif choice == "t":
+            tz = Prompt.ask("新时区（如 Asia/Shanghai）", default=cfg.get("timezone", "UTC"))
+            if _valid_tz(tz):
+                cfg["timezone"] = tz
+                ok(f"时区 → {tz}")
+            else:
+                err(f"无效时区: {tz}")
+        elif choice == "m":
+            _edit_mode_params(cfg, cfg.get("mode"))
+        elif choice == "c":
+            _edit_control(cfg)
+        elif choice == "v":
+            _preview(cfg)
         elif choice.isdigit() and 1 <= int(choice) <= len(modes):
             cfg["mode"] = modes[int(choice) - 1]
-            print("已切换模式 ->", cfg["mode"])
+            ok(f"已切换模式 → {cfg['mode']}")
         else:
-            print("无效选择")
+            err("无效选择")

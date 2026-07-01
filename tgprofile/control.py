@@ -37,12 +37,19 @@ def _normalize_triggers(raw):
 def _status(state):
     c = state.cfg
     flag = "⏸ 已暂停" if state.paused else "▶ 运行中"
-    return (f"{flag} | mode=<b>{c['mode']}</b> "
-            f"prefix=<b>{c.get('prefix', '')}</b> "
-            f"sep='{c.get('separator', ' ')}' "
-            f"font=<b>{normalize_style(c.get('font_style', 'plain'))}</b> "
-            f"interval={c.get('update_interval', 60)}s "
-            f"tz={c.get('timezone', 'UTC')}")
+    last_name = state.last_name or "等待首次更新"
+    return (
+        f"{flag}\n"
+        f"mode=<b>{html.escape(str(c['mode']))}</b> "
+        f"font=<b>{html.escape(normalize_style(c.get('font_style', 'plain')))}</b> "
+        f"interval={c.get('update_interval', 60)}s "
+        f"tz={html.escape(str(c.get('timezone', 'UTC')))}\n"
+        f"prefix=<b>{html.escape(str(c.get('prefix', '')))}</b> "
+        f"sep='<b>{html.escape(str(c.get('separator', ' ')))}</b>'\n"
+        f"当前昵称: <code>{html.escape(last_name)}</code>\n"
+        f"运行目录: <code>{html.escape(str(APP_DIR))}</code>\n"
+        f"配置文件: <code>{html.escape(str(Path(state.config_path).resolve()))}</code>"
+    )
 
 
 def _panel(state, cprefix, triggers):
@@ -119,8 +126,8 @@ async def _pull_latest():
         return (
             "✅ 已拉取最新脚本\n"
             f"<code>{output}</code>\n\n"
-            "如果更新了 Python 代码，请重启当前进程或运行 "
-            "<code>systemctl restart tg-profile</code> 后生效。"
+            "如果更新了 Python 代码，未安装 systemd 服务时请重启当前进程；"
+            "已安装服务时运行 <code>systemctl restart tg-profile</code> 后生效。"
         )
     return (
         "❌ 更新失败\n"
@@ -181,7 +188,12 @@ def register_control(client, state):
             style = normalize_style(arg)
             _persist(state, font_style=style)
             state.wake()
-            await reply(f"✅ 字体 → <b>{style}</b>\n示例: <code>{style_example(style)}</code>")
+            await reply(
+                f"✅ 字体 → <b>{style}</b>\n"
+                f"示例: <code>{style_example(style)}</code>\n"
+                "几秒内会整体应用到前缀和动态内容；发送 "
+                f"<code>{cprefix}status</code> 可查看实际昵称。"
+            )
         elif cmd == "sep":
             _persist(state, separator=arg or " ")
             state.wake()

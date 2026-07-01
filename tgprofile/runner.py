@@ -63,14 +63,15 @@ async def _updater(client, state):
                 else:
                     now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
                     opts = cfg.get("modes", {}).get(mode, {})
+                    font_style = normalize_style(cfg.get("font_style", "plain"))
                     ctx = Ctx(
                         now,
                         cfg.get("prefix", ""),
                         cfg.get("separator", " "),
                         opts,
-                        normalize_style(cfg.get("font_style", "plain")),
+                        font_style,
                     )
-                    name = (await fn(ctx))[:NAME_MAX]
+                    name = apply_style(await fn(ctx), font_style)[:NAME_MAX]
                     if name != last:
                         await client(UpdateProfileRequest(first_name=name))
                         last = name

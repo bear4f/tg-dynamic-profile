@@ -216,7 +216,7 @@ def _preview(cfg):
         normalize_style(cfg.get("font_style", "plain")),
     )
     try:
-        name = asyncio.run(fn(ctx))
+        name = apply_style(asyncio.run(fn(ctx)), ctx.font_style)
         console.print(Panel(f"[bold green]{name}[/bold green]",
                              title="预览效果（当前会实际显示的昵称）", border_style="green"))
     except Exception as e:

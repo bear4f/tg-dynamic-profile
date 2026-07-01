@@ -86,18 +86,17 @@ async def _updater(client, state):
                     if name != last:
                         result = await client(UpdateProfileRequest(first_name=name))
                         last = name
-                        # account.updateProfile 返回的 User 才是服务器真正存下的名字：
-                        # 它可能会把花体字过滤/还原成普通字母，这里直接用服务器的回包
-                        # 判断，而不是假设发出去的就是最终显示的——这才是"有时候花体、
-                        # 有时候变回默认"的真实原因：服务器过滤不是每次都触发，不是本
-                        # 程序的 bug，只是之前没把这个差异打到日志里，看起来就很随机。
+                        # account.updateProfile 返回的 User 才是服务器真正存下的名字，
+                        # 用它而不是假设发出去的就是最终显示的，这样才能发现请求成功
+                        # 但实际存的内容跟预期不一样的情况（原因不一定是 Telegram，
+                        # 也可能是同一账号上还有别的进程在抢着改，见 _self_check）。
                         confirmed = getattr(result, "first_name", None) or name
                         state.last_name = confirmed
                         state.last_set_at = time_module.time()
                         if confirmed != name:
                             log.warning(
-                                "name -> %s（⚠️ Telegram 服务器把它还原成了 %s，"
-                                "花体字被过滤，非本程序问题）", name, confirmed)
+                                "name -> %s（⚠️ 但服务器返回的实际是 %s，跟发出去的不一致，"
+                                "检查是否有其他进程/服务也在改同一账号）", name, confirmed)
                         else:
                             log.info("name -> %s", name)
         except FloodWaitError as e:
@@ -121,12 +120,14 @@ async def _updater(client, state):
 
 
 async def _self_check(client, state, interval=15):
-    """定期主动重新查询 Telegram 上现在真正存的名字。
+    """定期主动重新查询 Telegram 上现在真正存的名字，发现被"外部"改掉就报警。
 
-    实测发现：调用 account.updateProfile 那一刻的回包会确认花体字符已经被接受，
-    但过一段时间后 Telegram 会在后台悄悄把它异步还原成普通字母——只看更新那一刻
-    的回包完全发现不了这种"延迟生效"的还原。这里独立于更新循环，定期主动问一次
-    服务器现在到底是什么，才能抓到这种事后被改的情况，并记录大概过了多久发生。
+    只看 UpdateProfileRequest 那一刻的回包，发现不了后来才发生的变化——不管是
+    Telegram 自己改的，还是同一台服务器上还有别的进程/服务也在改这个账号的资料
+    （实测中遇到的一个真实案例：一个没清理掉的旧 systemd 服务在后台反复把名字改
+    回去）。这里独立于更新循环定期主动确认一次，并记录大概过了多久发生，方便
+    定位"过一会名字又变了"到底是谁干的——先排查本机是否有多个进程在抢着改同一
+    账号，不要预设是 Telegram 的问题。
     """
     while True:
         await asyncio.sleep(interval)
@@ -140,8 +141,8 @@ async def _self_check(client, state, interval=15):
         if me.first_name != state.last_name:
             elapsed = time_module.time() - (state.last_set_at or time_module.time())
             log.warning(
-                "自检发现昵称被后台改成了 %s（原来是 %s，设置后约 %.0f 秒发生，"
-                "推测是 Telegram 异步还原花体字符，不是本程序改的）",
+                "自检发现昵称被外部改成了 %s（原来是 %s，距上次设置约 %.0f 秒后发生，"
+                "检查本机是否还有别的进程/服务在改同一个 Telegram 账号）",
                 me.first_name, state.last_name, elapsed)
             state.last_name = me.first_name
             state.last_set_at = time_module.time()

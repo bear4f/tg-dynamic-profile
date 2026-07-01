@@ -29,7 +29,7 @@ class Ctx:
     font_style: str = "plain"
 
     def compose(self, body):
-        return self.stylize(f"{self.prefix}{self.separator}{body}")
+        return f"{self.prefix}{self.separator}{body}"
 
     def stylize(self, text):
         return apply_style(text, self.font_style)
@@ -41,12 +41,32 @@ class State:
     cfg: dict
     config_path: str
     paused: bool = False
+    last_name: Optional[str] = None
     poke: Optional[asyncio.Event] = field(default=None)
 
     def wake(self):
         """Ask the updater to re-render immediately (after a live change)."""
         if self.poke:
             self.poke.set()
+
+
+async def render_profile_name(cfg):
+    mode = cfg["mode"]
+    fn = REGISTRY.get(mode)
+    if fn is None:
+        raise ValueError(f"unknown mode '{mode}'")
+
+    font_style = normalize_style(cfg.get("font_style", "plain"))
+    now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
+    opts = cfg.get("modes", {}).get(mode, {})
+    ctx = Ctx(
+        now,
+        cfg.get("prefix", ""),
+        cfg.get("separator", " "),
+        opts,
+        font_style,
+    )
+    return apply_style(await fn(ctx), font_style)[:NAME_MAX]
 
 
 async def _updater(client, state):
@@ -61,17 +81,8 @@ async def _updater(client, state):
                 if fn is None:
                     log.error("unknown mode '%s'", mode)
                 else:
-                    now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
-                    opts = cfg.get("modes", {}).get(mode, {})
-                    font_style = normalize_style(cfg.get("font_style", "plain"))
-                    ctx = Ctx(
-                        now,
-                        cfg.get("prefix", ""),
-                        cfg.get("separator", " "),
-                        opts,
-                        font_style,
-                    )
-                    name = apply_style(await fn(ctx), font_style)[:NAME_MAX]
+                    name = await render_profile_name(cfg)
+                    state.last_name = name
                     if name != last:
                         await client(UpdateProfileRequest(first_name=name))
                         last = name
@@ -150,8 +161,9 @@ async def run_loop(config_path):
     if ctrl_enabled:
         triggers = _normalize_triggers((cfg.get("control") or {}).get("trigger", DEFAULT_TRIGGERS))
         extra = f" | Telegram 面板(可选): 在收藏夹发送 '{' / '.join(triggers)}'"
-    log.info("Logged in as @%s | mode=%s | 改配置用 `python app.py menu`（几秒内自动生效，不用重启）%s",
-             me.username or me.first_name, cfg["mode"], extra)
+    log.info("Logged in as @%s | mode=%s | app=%s | config=%s | 改配置用 `python app.py menu`（几秒内自动生效，不用重启）%s",
+             me.username or me.first_name, cfg["mode"], os.path.dirname(os.path.dirname(__file__)),
+             os.path.abspath(config_path), extra)
 
     client.loop.create_task(_updater(client, state))
     client.loop.create_task(_config_watcher(state))

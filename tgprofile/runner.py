@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time as time_module
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -70,9 +71,13 @@ async def _updater(client, state):
         except Exception as e:
             log.error("update failed: %s", e)
 
-        # sleep until next tick, but wake early (and force re-render) on a live change
+        # 睡到下一个整点对齐的检查点，而不是"从现在起等 delay 秒"——
+        # 否则每次检查的相位取决于进程启动时刻，time/datetime 等按分钟显示的
+        # 模式最多会滞后接近一个 delay（比如 interval=60 时最多滞后 59 秒）。
+        # 对齐后，interval=60 时检查点固定在每分钟的 :00 秒，基本无延迟。
+        aligned_wait = max(delay - (time_module.time() % delay), 1)
         try:
-            await asyncio.wait_for(state.poke.wait(), timeout=delay)
+            await asyncio.wait_for(state.poke.wait(), timeout=aligned_wait)
             state.poke.clear()
             last = None
         except asyncio.TimeoutError:

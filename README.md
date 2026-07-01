@@ -237,6 +237,7 @@ async def mode_stars(ctx):
 
 - **没反应？** 名字只在内容变化时更新；`time` 模式分钟变了才会改。看 `journalctl -u tg-profile -f`。
 - **FloodWait？** 把 `update_interval` 调大（120/300）。日志会显示需等待秒数并自动退避。
+- **时间显示有延迟？** `time`/`datetime`/`daynight` 等模式最多滞后一个 `update_interval`——比如 `interval=120` 时，昵称上的时间最多会比实际慢 2 分钟，这是"每 N 秒才检查一次"的固有延迟，不是 bug。检查点已按真实时钟对齐（`interval=60` 时固定在每分钟的 :00 秒触发），所以把 `update_interval` 调到 `60` 基本就能做到分钟级同步；改完用 `emoji`/`app.py menu` 保存即可，几秒内自动生效不用重启。
 - **想停止？** `systemctl stop tg-profile`，或菜单选「停止」。
 
 ## License

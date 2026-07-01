@@ -61,9 +61,11 @@ cd ~/tg-dynamic-profile
 
 ---
 
-## 📱（可选）Telegram 收藏夹面板
+## 📱（可选 / 不推荐）Telegram 收藏夹面板
 
-不想开终端时，也可以在 Telegram 里改。这个功能**默认关闭**，需要先在 `config.json` 打开：
+**默认关闭，日常使用不需要它** —— 上面的终端菜单（`emoji` / `app.py menu`）已经覆盖所有配置项，改完自动生效，不用打开 Telegram、不用发消息。这个收藏夹面板只是给不方便开终端时的备用方案保留，可以完全忽略这一节。
+
+如果确实需要，先在 `config.json` 打开：
 
 ```jsonc
 "control": { "enabled": true, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" }

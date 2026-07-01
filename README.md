@@ -113,9 +113,11 @@ cd ~/tg-dynamic-profile
 
 ---
 
-## 🔠 字体样式（Unicode 花体字，所有人可见）
+## 🔠 字体样式（Unicode 花体字，⚠️ 实测对 Telegram 昵称基本无效）
 
-Telegram 本身不支持选字体，但可以把整条昵称换成 Unicode 数学字母数字符号区块里的花体字符，视觉上就是"换字体"了。在 `config.json` 顶层加一个 `font` 字段，或者用终端菜单 `f. 选字体样式` 直接选（带实时预览）：
+> **已知限制（实测确认，不是 bug）**：Telegram 服务器会在保存 `first_name`（昵称）时，把这类"长得像字母但其实是另一个 Unicode 字符"的花体字还原成普通字母，应该是防止有人用这种字符冒充别人。已验证 `bold_script`、`double_struck`、`fullwidth`（分属两个完全不同的 Unicode 区块）全部被还原成纯 ASCII，`circled` 等其余风格大概率同样无效。也就是说**这一整个功能目前基本用不上**，保留代码只是留个记录 / 万一以后 Telegram 改规则，日常直接用 `font: "none"` 就好。
+
+Telegram 本身不支持选字体，原理是把整条昵称换成 Unicode 数学字母数字符号区块里的花体字符，视觉上就是"换字体"了。在 `config.json` 顶层加一个 `font` 字段，或者用终端菜单 `f. 选字体样式` 直接选（带实时预览，选择时会再提示一次上面的限制）：
 
 ```jsonc
 "font": "double_struck"

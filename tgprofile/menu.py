@@ -161,6 +161,12 @@ def _edit_font(cfg):
     sample = cfg.get("prefix") or "YourName"
     while True:
         console.print()
+        console.print(Panel(
+            "实测反馈：Telegram 服务器会把这类'字母替身' Unicode 字符还原成普通字母再保存，"
+            "属于平台防仿冒过滤，不是本程序的 bug。已验证 bold_script / double_struck / "
+            "fullwidth 三种（分属两个不同 Unicode 区块）均被还原，其余风格大概率同样无效。\n"
+            "选了也不一定会有视觉效果，介意的话保持 none 即可。",
+            title="⚠️ 已知限制", border_style="yellow"))
         table = Table(title="字体样式（把整条昵称转成对应 Unicode 花体字，Telegram 里所有人可见）")
         table.add_column("序号", justify="right")
         table.add_column("样式")
@@ -179,7 +185,8 @@ def _edit_font(cfg):
             ok("字体 → none（不转换）")
         elif choice.isdigit() and 1 <= int(choice) <= len(STYLE_NAMES):
             cfg["font"] = STYLE_NAMES[int(choice) - 1]
-            ok(f"字体 → {cfg['font']}（{apply_font(sample, cfg['font'])}）")
+            ok(f"字体 → {cfg['font']}（{apply_font(sample, cfg['font'])}，"
+               f"注意 Telegram 可能会把它还原成普通字母，见上方提示）")
         else:
             err("无效选择")
 

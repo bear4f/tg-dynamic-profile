@@ -142,6 +142,13 @@ async def run_loop(config_path):
     log.info("Logged in as @%s | mode=%s | 改配置用 `python app.py menu`（几秒内自动生效，不用重启）%s",
              me.username or me.first_name, cfg["mode"], extra)
 
+    font = cfg.get("font")
+    if font and font not in ("none", "plain"):
+        log.warning(
+            "font=%s：实测 Telegram 会把这类 Unicode 字母替身字符还原成普通字母再保存"
+            "（防仿冒过滤，非本程序 bug），昵称可能不会有花体效果，见 README『字体样式』",
+            font)
+
     client.loop.create_task(_updater(client, state))
     client.loop.create_task(_config_watcher(state))
     await client.run_until_disconnected()

@@ -8,6 +8,7 @@ from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
 from .config import load_config, save_config
+from .fonts import STYLE_NAMES, apply_font
 from .providers import REGISTRY
 from .ui import banner, console, err, info, ok, section, warn
 
@@ -60,6 +61,7 @@ def _status_panel(cfg):
         f"分隔符 separator '{cfg.get('separator', ' ')}'",
         f"刷新间隔 interval {cfg.get('update_interval', 60)}s",
         f"时区 timezone    {cfg.get('timezone', 'UTC')}",
+        f"字体 font        {cfg.get('font') or 'none'}",
         f"控制面板         {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}"
         f"（触发词 {_trigger_display(ctrl)} / 命令前缀 '{ctrl.get('prefix', '.')}'）",
     ]
@@ -155,6 +157,33 @@ def _edit_control(cfg):
             err("无效选择")
 
 
+def _edit_font(cfg):
+    sample = cfg.get("prefix") or "YourName"
+    while True:
+        console.print()
+        table = Table(title="字体样式（把整条昵称转成对应 Unicode 花体字，Telegram 里所有人可见）")
+        table.add_column("序号", justify="right")
+        table.add_column("样式")
+        table.add_column(f"预览（用当前前缀 '{sample}' 举例）")
+        table.add_row("0", "none", sample)
+        for i, name in enumerate(STYLE_NAMES, 1):
+            table.add_row(str(i), name, apply_font(sample, name))
+        console.print(table)
+        console.print("  输入序号选择样式   [bold]b[/bold]. 返回上级菜单")
+        choice = Prompt.ask("请选择").strip().lower()
+
+        if choice == "b":
+            return
+        elif choice == "0":
+            cfg["font"] = "none"
+            ok("字体 → none（不转换）")
+        elif choice.isdigit() and 1 <= int(choice) <= len(STYLE_NAMES):
+            cfg["font"] = STYLE_NAMES[int(choice) - 1]
+            ok(f"字体 → {cfg['font']}（{apply_font(sample, cfg['font'])}）")
+        else:
+            err("无效选择")
+
+
 def _preview(cfg):
     mode = cfg.get("mode")
     fn = REGISTRY.get(mode)
@@ -172,7 +201,7 @@ def _preview(cfg):
     opts = cfg.get("modes", {}).get(mode, {})
     ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
     try:
-        name = asyncio.run(fn(ctx))
+        name = apply_font(asyncio.run(fn(ctx)), cfg.get("font"))
         console.print(Panel(f"[bold green]{name}[/bold green]",
                              title="预览效果（当前会实际显示的昵称）", border_style="green"))
     except Exception as e:
@@ -196,8 +225,8 @@ def menu(path):
             "  [bold]p[/bold]. 改前缀 prefix        [bold]s[/bold]. 改分隔符 separator\n"
             "  [bold]i[/bold]. 改刷新间隔 interval   [bold]t[/bold]. 改时区 timezone\n"
             "  [bold]m[/bold]. 编辑当前模式参数      [bold]c[/bold]. 控制面板设置\n"
-            "  [bold]v[/bold]. 预览当前效果          [bold]q[/bold]. 保存并退出\n"
-            "                                    [bold]x[/bold]. 不保存退出\n"
+            "  [bold]f[/bold]. 选字体样式            [bold]v[/bold]. 预览当前效果\n"
+            "  [bold]q[/bold]. 保存并退出            [bold]x[/bold]. 不保存退出\n"
         )
 
         choice = Prompt.ask("请选择").strip().lower()
@@ -230,6 +259,8 @@ def menu(path):
             _edit_mode_params(cfg, cfg.get("mode"))
         elif choice == "c":
             _edit_control(cfg)
+        elif choice == "f":
+            _edit_font(cfg)
         elif choice == "v":
             _preview(cfg)
         elif choice.isdigit() and 1 <= int(choice) <= len(modes):

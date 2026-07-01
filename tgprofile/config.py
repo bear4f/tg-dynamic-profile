@@ -10,6 +10,7 @@ DEFAULTS = {
     "separator": " ",
     "timezone": "UTC",
     "update_interval": 60,
+    "font": "none",
     "modes": {},
 }
 

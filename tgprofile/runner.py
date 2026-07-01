@@ -13,6 +13,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 from .client import build_client
 from .config import load_config
 from .control import DEFAULT_TRIGGERS, _normalize_triggers, register_control
+from .fonts import apply_font
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
@@ -59,7 +60,7 @@ async def _updater(client, state):
                     now = datetime.now(ZoneInfo(cfg.get("timezone", "UTC")))
                     opts = cfg.get("modes", {}).get(mode, {})
                     ctx = Ctx(now, cfg.get("prefix", ""), cfg.get("separator", " "), opts)
-                    name = (await fn(ctx))[:NAME_MAX]
+                    name = apply_font(await fn(ctx), cfg.get("font"))[:NAME_MAX]
                     if name != last:
                         await client(UpdateProfileRequest(first_name=name))
                         last = name

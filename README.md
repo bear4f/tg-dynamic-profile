@@ -113,6 +113,33 @@ cd ~/tg-dynamic-profile
 
 ---
 
+## 🔠 字体样式（Unicode 花体字，所有人可见）
+
+Telegram 本身不支持选字体，但可以把整条昵称换成 Unicode 数学字母数字符号区块里的花体字符，视觉上就是"换字体"了。在 `config.json` 顶层加一个 `font` 字段，或者用终端菜单 `f. 选字体样式` 直接选（带实时预览）：
+
+```jsonc
+"font": "double_struck"
+```
+
+| 值 | 效果（前缀 `YourName` 举例） |
+|----|----|
+| `none`（默认，不转换） | `YourName` |
+| `bold` | `𝐘𝐨𝐮𝐫𝐍𝐚𝐦𝐞` |
+| `italic` | `𝑌𝑜𝑢𝑟𝑁𝑎𝑚𝑒` |
+| `bold_italic` | `𝒀𝒐𝒖𝒓𝑵𝒂𝒎𝒆` |
+| `script` | `𝒴𝓄𝓊𝓇𝒩𝒶𝓂𝒺` |
+| `bold_script` | `𝓨𝓸𝓾𝓻𝓝𝓪𝓶𝓮` |
+| `fraktur` | `𝔜𝔬𝔲𝔯𝔑𝔞𝔪𝔢` |
+| `double_struck` | `𝕐𝕠𝕦𝕣ℕ𝕒𝕞𝕖` |
+| `sans_bold` | `𝗬𝗼𝘂𝗿𝗡𝗮𝗺𝗲` |
+| `monospace` | `𝚈𝚘𝚞𝚛𝙽𝚊𝚖𝚎` |
+| `fullwidth` | `ＹｏｕｒＮａｍｅ` |
+| `circled` | `ⓎⓞⓤⓡⓃⓐⓜⓔ` |
+
+只转换 `A-Z`/`a-z`/`0-9`，emoji、中文、标点原样保留，所以 `weather`/`crypto` 等模式里的表情符号不受影响。部分手机字体渲染这些字符可能跟其它字符宽度不一致，属于 Unicode 显示差异，不是 bug。
+
+---
+
 ## 安装
 
 ### 1. 获取 API 凭证
@@ -194,6 +221,7 @@ journalctl -u tg-profile -f   # 看实时日志
   "separator": " ",               // 前缀与内容之间的分隔符，可用 " | "、"｜"
   "timezone": "Europe/London",      // 时区
   "update_interval": 60,          // 刷新间隔（秒），建议 >= 60
+  "font": "none",                 // 字体样式（Unicode 花体字），可选值见上面『字体样式』一节
   "modes": {                      // 各模式的参数
     "time":     { "format": "%H:%M" },
     "datetime": { "format": "%m/%d %H:%M" },

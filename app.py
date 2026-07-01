@@ -4,8 +4,8 @@
 用法:
     python app.py setup           # 一键向导：填凭证 -> 登录 -> 选模式
     python app.py login           # 仅登录（生成 session 文件）
-    python app.py run             # 启动更新循环 + Emoji 控制面板
-    python app.py menu            # 交互菜单，修改 config.json
+    python app.py run             # 启动更新循环（运行时会自动感知 config.json 变化）
+    python app.py menu            # 交互菜单：改配置，几秒内自动生效，不用重启
 """
 import argparse
 import asyncio
@@ -99,8 +99,8 @@ def cmd_setup(args):
 
     section("完成")
     console.print("前台运行:  [bold]python app.py run[/bold]")
-    console.print("交互菜单:  [bold]python app.py menu[/bold]（改模式/前缀/参数，带预览）")
-    console.print("控制面板:  运行后在 Telegram 收藏夹发送 面板 或 panel")
+    console.print("改配置:    另开终端跑 [bold]python app.py menu[/bold]（改模式/前缀/参数，带预览），"
+                  "保存后几秒内自动生效，不用重启")
     console.print("常驻服务:  见 README『部署为 systemd 服务』")
 
 
@@ -123,7 +123,7 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("setup", help="一键部署向导（凭证/登录/模式）").set_defaults(func=cmd_setup)
     sub.add_parser("login", help="仅登录 Telegram（生成 session）").set_defaults(func=cmd_login)
-    sub.add_parser("run", help="启动更新循环 + 控制面板").set_defaults(func=cmd_run)
+    sub.add_parser("run", help="启动更新循环（自动感知配置变化）").set_defaults(func=cmd_run)
     sub.add_parser("menu", help="交互菜单，修改配置").set_defaults(func=cmd_menu)
 
     args = p.parse_args()

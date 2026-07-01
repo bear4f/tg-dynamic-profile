@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -78,6 +79,38 @@ async def _updater(client, state):
             pass
 
 
+async def _config_watcher(state, interval=3):
+    """轮询 config.json 的修改时间，检测到变化就重新加载。
+
+    这样 `python app.py menu` 在终端里改完配置，正在运行的 `app.py run`
+    几秒内就能自动生效，不需要重启进程，也不需要走 Telegram 收藏夹。
+    """
+    path = state.config_path
+    try:
+        last_mtime = os.path.getmtime(path)
+    except OSError:
+        last_mtime = None
+
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            continue
+        if mtime == last_mtime:
+            continue
+        last_mtime = mtime
+        try:
+            new_cfg = load_config(path)
+        except SystemExit as e:
+            log.warning("config.json 已更新但加载失败，忽略本次变更: %s", e)
+            continue
+        state.cfg.update(new_cfg)
+        state.wake()
+        log.info("检测到 config.json 变更，已重新加载 | mode=%s prefix=%s",
+                  state.cfg.get("mode"), state.cfg.get("prefix"))
+
+
 async def run_loop(config_path):
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
@@ -95,9 +128,14 @@ async def run_loop(config_path):
     state = State(cfg=cfg, config_path=config_path, poke=asyncio.Event())
     register_control(client, state)
 
-    triggers = _normalize_triggers((cfg.get("control") or {}).get("trigger", DEFAULT_TRIGGERS))
-    log.info("Logged in as @%s | mode=%s | 控制面板: 在收藏夹发送 '%s'",
-             me.username or me.first_name, cfg["mode"], " / ".join(triggers))
+    ctrl_enabled = (cfg.get("control") or {}).get("enabled", True)
+    extra = ""
+    if ctrl_enabled:
+        triggers = _normalize_triggers((cfg.get("control") or {}).get("trigger", DEFAULT_TRIGGERS))
+        extra = f" | Telegram 面板(可选): 在收藏夹发送 '{' / '.join(triggers)}'"
+    log.info("Logged in as @%s | mode=%s | 改配置用 `python app.py menu`（几秒内自动生效，不用重启）%s",
+             me.username or me.first_name, cfg["mode"], extra)
 
     client.loop.create_task(_updater(client, state))
+    client.loop.create_task(_config_watcher(state))
     await client.run_until_disconnected()

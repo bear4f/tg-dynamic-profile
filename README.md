@@ -34,16 +34,37 @@ bash <(curl -fsSL https://raw.githubusercontent.com/bear4f/tg-dynamic-profile/ma
 向导跑完后：
 ```bash
 cd ~/tg-dynamic-profile
-.venv/bin/python app.py run        # 启动（含 ⚙️ 控制面板）
+.venv/bin/python app.py run        # 启动（改配置见下面『修改配置』，几秒内自动生效，不用重启）
 ```
 
 > 想常驻后台，见下方『部署为 systemd 服务』。
 
 ---
 
-## ⚙️ 控制面板（运行后随时改）
+## 🎛 修改配置（终端菜单，运行时自动生效）
 
-程序运行后，**不用 SSH、不用改文件**，直接在 Telegram 操作：
+`app.py run` 启动之后**不用退出、不用重启**，另开一个 SSH 窗口跑菜单直接改：
+
+```bash
+cd ~/tg-dynamic-profile
+.venv/bin/python app.py menu
+```
+
+全是数字/字母选项，1、2、3 选就行：切模式、改前缀、改分隔符、改刷新间隔、改时区、改当前模式的参数（比如天气的经纬度）、实时预览效果，改完 `q` 保存。**保存后几秒内，正在运行的 `app.py run` 会自动检测到 `config.json` 变化并重新加载**，不需要手动重启进程、也不需要在 Telegram 里操作。
+
+如果是用 systemd 常驻的，菜单改完不用 `systemctl restart`，等几秒生效即可；只有改 `api_id`/`api_hash`/`session` 这类需要重新登录的项才需要重启。
+
+---
+
+## 📱（可选）Telegram 收藏夹面板
+
+不想开终端时，也可以在 Telegram 里改。这个功能**默认关闭**，需要先在 `config.json` 打开：
+
+```jsonc
+"control": { "enabled": true, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" }
+```
+
+（或用 `python app.py menu` -> `c` -> `1` 打开）打开后：
 
 1. 打开 **Saved Messages（收藏夹）**
 2. 发送 `面板` 或 `panel`（默认中英文触发词都可用，不区分大小写）—— userbot 会把它就地编辑成控制面板
@@ -59,13 +80,7 @@ cd ~/tg-dynamic-profile
 .status            查看当前状态
 ```
 
-改动**立即生效**并写回 `config.json`（重启后保留）。触发词、命令前缀、生效对话都可在 `config.json` 的 `control` 段自定义（也可以在 `python app.py menu` 里选 `c` 直接改，不用手动编辑 JSON）：
-
-```jsonc
-"control": { "enabled": true, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" }
-```
-
-`trigger` 可以是单个字符串，也可以是字符串数组（同时支持多个别名，如中文+英文，甚至换成表情）。之前版本默认用 `⚙️` 表情触发，但不同手机/输入法发出的 emoji 编码可能不完全一致，导致精确匹配失败、发了没反应；改成文字触发更可靠。已部署的实例需要把自己 `config.json` 里的 `control.trigger` 也改一下（`python app.py menu` -> `c` -> `2`），或者继续用你自己喜欢的表情/文字都行。
+`trigger` 可以是单个字符串，也可以是字符串数组（同时支持多个别名，如中文+英文，甚至换成表情）。
 
 > 仅在 `chat`（默认你自己的收藏夹）里的**你本人发出**的消息才会被识别，不会影响普通聊天。
 

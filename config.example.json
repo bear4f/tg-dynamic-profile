@@ -7,7 +7,7 @@
   "separator": " ",
   "timezone": "Europe/London",
   "update_interval": 60,
-  "control": { "enabled": true, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" },
+  "control": { "enabled": false, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" },
   "modes": {
     "time": { "format": "%H:%M" },
     "datetime": { "format": "%m/%d %H:%M" },

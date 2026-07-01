@@ -82,11 +82,22 @@ async def _updater(client, state):
                     log.error("unknown mode '%s'", mode)
                 else:
                     name = await render_profile_name(cfg)
-                    state.last_name = name
                     if name != last:
-                        await client(UpdateProfileRequest(first_name=name))
+                        result = await client(UpdateProfileRequest(first_name=name))
                         last = name
-                        log.info("name -> %s", name)
+                        # account.updateProfile 返回的 User 才是服务器真正存下的名字：
+                        # 它可能会把花体字过滤/还原成普通字母，这里直接用服务器的回包
+                        # 判断，而不是假设发出去的就是最终显示的——这才是"有时候花体、
+                        # 有时候变回默认"的真实原因：服务器过滤不是每次都触发，不是本
+                        # 程序的 bug，只是之前没把这个差异打到日志里，看起来就很随机。
+                        confirmed = getattr(result, "first_name", None) or name
+                        state.last_name = confirmed
+                        if confirmed != name:
+                            log.warning(
+                                "name -> %s（⚠️ Telegram 服务器把它还原成了 %s，"
+                                "花体字被过滤，非本程序问题）", name, confirmed)
+                        else:
+                            log.info("name -> %s", name)
         except FloodWaitError as e:
             log.warning("FloodWait: sleeping %ss", e.seconds)
             await asyncio.sleep(e.seconds + 5)

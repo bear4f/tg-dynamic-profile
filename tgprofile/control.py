@@ -1,9 +1,12 @@
-"""Emoji-summoned live control panel.
+"""文字触发的实时控制面板。
 
-Send the trigger emoji (default ⚙️) to your Telegram Saved Messages and the
-running userbot edits it into a control panel. Then send dot-commands in the
-same chat to change settings live, e.g. `.mode weather`, `.prefix Bob`,
-`.interval 120`, `.off`.
+在 Telegram 收藏夹发送触发词（默认中/英文 `面板` / `panel`，不依赖表情符号，
+因为不同手机/输入法发出的 emoji 编码不一致，可能导致精确匹配失败），运行中的
+userbot 会把消息就地编辑成控制面板。之后在同一对话发送点命令即可实时修改设置，
+例如 `.mode weather`、`.prefix Bob`、`.interval 120`、`.off`。
+
+触发词也可以自己改成表情或其它文字（见 config.json 的 control.trigger，支持
+单个字符串或字符串列表），文字匹配不区分大小写。
 """
 import json
 import logging
@@ -13,6 +16,16 @@ from telethon import events
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
+
+DEFAULT_TRIGGERS = ["面板", "panel"]
+
+
+def _normalize_triggers(raw):
+    """control.trigger 支持单个字符串或字符串列表，统一成去空白的列表。"""
+    if not raw:
+        return DEFAULT_TRIGGERS
+    values = raw if isinstance(raw, (list, tuple)) else [raw]
+    return [str(v).strip() for v in values if str(v).strip()] or DEFAULT_TRIGGERS
 
 
 def _status(state):
@@ -25,7 +38,7 @@ def _status(state):
             f"tz={c.get('timezone', 'UTC')}")
 
 
-def _panel(state, cprefix):
+def _panel(state, cprefix, triggers):
     return (
         "⚙️ <b>Dynamic Profile 控制面板</b>\n"
         f"{_status(state)}\n"
@@ -39,6 +52,7 @@ def _panel(state, cprefix):
         f"• <code>{cprefix}off</code> / <code>{cprefix}on</code> 暂停/恢复\n"
         f"• <code>{cprefix}status</code> 查看状态\n"
         f"\n可用模式: {', '.join(sorted(REGISTRY))}"
+        f"\n触发词: {' / '.join(triggers)}"
     )
 
 
@@ -64,7 +78,8 @@ def register_control(client, state):
     if not ctrl.get("enabled", True):
         log.info("control panel disabled")
         return
-    trigger = ctrl.get("trigger", "⚙️")
+    triggers = _normalize_triggers(ctrl.get("trigger", DEFAULT_TRIGGERS))
+    triggers_lower = [t.lower() for t in triggers]
     cprefix = ctrl.get("prefix", ".")
     chat = ctrl.get("chat", "me")
 
@@ -72,9 +87,9 @@ def register_control(client, state):
     async def _handler(event):
         text = (event.raw_text or "").strip()
 
-        # bare emoji -> open the panel
-        if text == trigger:
-            await event.edit(_panel(state, cprefix), parse_mode="html")
+        # 发送触发词（不区分大小写）-> 打开面板
+        if text.lower() in triggers_lower:
+            await event.edit(_panel(state, cprefix, triggers), parse_mode="html")
             return
 
         if not text.startswith(cprefix):

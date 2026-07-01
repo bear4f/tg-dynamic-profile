@@ -47,6 +47,11 @@ def _parse_value(raw):
         return raw
 
 
+def _trigger_display(ctrl):
+    trig = ctrl.get("trigger", ["面板", "panel"])
+    return " / ".join(trig) if isinstance(trig, (list, tuple)) else str(trig)
+
+
 def _status_panel(cfg):
     ctrl = cfg.get("control") or {}
     lines = [
@@ -56,7 +61,7 @@ def _status_panel(cfg):
         f"刷新间隔 interval {cfg.get('update_interval', 60)}s",
         f"时区 timezone    {cfg.get('timezone', 'UTC')}",
         f"控制面板         {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}"
-        f"（触发词 {ctrl.get('trigger', '⚙️')} / 命令前缀 '{ctrl.get('prefix', '.')}'）",
+        f"（触发词 {_trigger_display(ctrl)} / 命令前缀 '{ctrl.get('prefix', '.')}'）",
     ]
     console.print(Panel("\n".join(lines), title="当前配置", border_style="blue", expand=False))
 
@@ -114,17 +119,18 @@ def _edit_mode_params(cfg, mode):
 
 
 def _edit_control(cfg):
-    ctrl = cfg.setdefault("control", {"enabled": True, "trigger": "⚙️", "prefix": ".", "chat": "me"})
+    ctrl = cfg.setdefault("control", {"enabled": True, "trigger": ["面板", "panel"],
+                                       "prefix": ".", "chat": "me"})
     while True:
         console.print()
         console.print(Panel(
             f"启用状态   {'✅ 启用' if ctrl.get('enabled', True) else '⛔ 停用'}\n"
-            f"触发表情   {ctrl.get('trigger', '⚙️')}\n"
+            f"触发词     {_trigger_display(ctrl)}\n"
             f"命令前缀   {ctrl.get('prefix', '.')}\n"
             f"生效对话   {ctrl.get('chat', 'me')}（me = 收藏夹，只识别你本人发出的消息）",
             title="控制面板设置", border_style="magenta"))
         console.print(
-            "  1. 切换启用/停用   2. 改触发表情   3. 改命令前缀   4. 改生效对话   b. 返回")
+            "  1. 切换启用/停用   2. 改触发词   3. 改命令前缀   4. 改生效对话   b. 返回")
         choice = Prompt.ask("请选择").strip().lower()
 
         if choice == "b":
@@ -133,7 +139,14 @@ def _edit_control(cfg):
             ctrl["enabled"] = not ctrl.get("enabled", True)
             ok("已切换" if ctrl["enabled"] else "已停用")
         elif choice == "2":
-            ctrl["trigger"] = Prompt.ask("新触发表情", default=ctrl.get("trigger", "⚙️"))
+            raw = Prompt.ask("新触发词（不区分大小写；支持中/英文/表情；多个用逗号分隔，如 面板,panel）",
+                              default=_trigger_display(ctrl).replace(" / ", ","))
+            parts = [p.strip() for p in raw.split(",") if p.strip()]
+            if not parts:
+                err("触发词不能为空")
+            else:
+                ctrl["trigger"] = parts[0] if len(parts) == 1 else parts
+                ok(f"触发词 → {_trigger_display(ctrl)}")
         elif choice == "3":
             ctrl["prefix"] = Prompt.ask("新命令前缀", default=ctrl.get("prefix", "."))
         elif choice == "4":

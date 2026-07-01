@@ -100,7 +100,7 @@ def cmd_setup(args):
     section("完成")
     console.print("前台运行:  [bold]python app.py run[/bold]")
     console.print("交互菜单:  [bold]python app.py menu[/bold]（改模式/前缀/参数，带预览）")
-    console.print("控制面板:  运行后在 Telegram 收藏夹发送 ⚙️")
+    console.print("控制面板:  运行后在 Telegram 收藏夹发送 面板 或 panel")
     console.print("常驻服务:  见 README『部署为 systemd 服务』")
 
 

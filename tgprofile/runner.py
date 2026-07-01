@@ -10,7 +10,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 
 from .client import build_client
 from .config import load_config
-from .control import register_control
+from .control import DEFAULT_TRIGGERS, _normalize_triggers, register_control
 from .providers import REGISTRY
 
 log = logging.getLogger("tgprofile")
@@ -95,9 +95,9 @@ async def run_loop(config_path):
     state = State(cfg=cfg, config_path=config_path, poke=asyncio.Event())
     register_control(client, state)
 
-    trigger = (cfg.get("control") or {}).get("trigger", "⚙️")
+    triggers = _normalize_triggers((cfg.get("control") or {}).get("trigger", DEFAULT_TRIGGERS))
     log.info("Logged in as @%s | mode=%s | 控制面板: 在收藏夹发送 '%s'",
-             me.username or me.first_name, cfg["mode"], trigger)
+             me.username or me.first_name, cfg["mode"], " / ".join(triggers))
 
     client.loop.create_task(_updater(client, state))
     await client.run_until_disconnected()

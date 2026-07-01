@@ -41,12 +41,12 @@ cd ~/tg-dynamic-profile
 
 ---
 
-## ⚙️ Emoji 控制面板（运行后随时改）
+## ⚙️ 控制面板（运行后随时改）
 
 程序运行后，**不用 SSH、不用改文件**，直接在 Telegram 操作：
 
 1. 打开 **Saved Messages（收藏夹）**
-2. 发送一个 `⚙️` —— userbot 会把它就地编辑成控制面板
+2. 发送 `面板` 或 `panel`（默认中英文触发词都可用，不区分大小写）—— userbot 会把它就地编辑成控制面板
 3. 在同一对话发送点命令实时修改：
 
 ```
@@ -59,11 +59,13 @@ cd ~/tg-dynamic-profile
 .status            查看当前状态
 ```
 
-改动**立即生效**并写回 `config.json`（重启后保留）。触发表情、命令前缀、生效对话都可在 `config.json` 的 `control` 段自定义：
+改动**立即生效**并写回 `config.json`（重启后保留）。触发词、命令前缀、生效对话都可在 `config.json` 的 `control` 段自定义（也可以在 `python app.py menu` 里选 `c` 直接改，不用手动编辑 JSON）：
 
 ```jsonc
-"control": { "enabled": true, "trigger": "⚙️", "prefix": ".", "chat": "me" }
+"control": { "enabled": true, "trigger": ["面板", "panel"], "prefix": ".", "chat": "me" }
 ```
+
+`trigger` 可以是单个字符串，也可以是字符串数组（同时支持多个别名，如中文+英文，甚至换成表情）。之前版本默认用 `⚙️` 表情触发，但不同手机/输入法发出的 emoji 编码可能不完全一致，导致精确匹配失败、发了没反应；改成文字触发更可靠。已部署的实例需要把自己 `config.json` 里的 `control.trigger` 也改一下（`python app.py menu` -> `c` -> `2`），或者继续用你自己喜欢的表情/文字都行。
 
 > 仅在 `chat`（默认你自己的收藏夹）里的**你本人发出**的消息才会被识别，不会影响普通聊天。
 

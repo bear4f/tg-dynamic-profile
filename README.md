@@ -85,6 +85,7 @@ cd ~/tg-dynamic-profile
 .interval 120      改刷新间隔(秒)
 .sep  |            改分隔符
 .tz Asia/Shanghai  改时区
+.update            拉取最新脚本（等同 .pull）
 .off  /  .on       暂停 / 恢复更新
 .status            查看当前状态
 ```
@@ -92,6 +93,7 @@ cd ~/tg-dynamic-profile
 `trigger` 可以是单个字符串，也可以是字符串数组（同时支持多个别名，如中文+英文，甚至换成表情）。
 
 > 仅在 `chat`（默认你自己的收藏夹）里的**你本人发出**的消息才会被识别，不会影响普通聊天。
+> `.update` 只会在项目目录执行 `git pull --ff-only`。如果拉到了新的 Python 代码，需要重启当前进程或运行 `systemctl restart tg-profile` 后才会加载新代码。
 
 ---
 

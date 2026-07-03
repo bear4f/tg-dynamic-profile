@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import json
 import os
+import sys
 from zoneinfo import ZoneInfo
 
 from rich.prompt import Confirm, Prompt
@@ -141,4 +142,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n[dim]已退出，未保存的改动不会写入 config.json。[/dim]")
+        sys.exit(130)

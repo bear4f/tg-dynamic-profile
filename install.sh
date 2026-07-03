@@ -7,7 +7,11 @@ SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo ">>> 安装到 $APP_DIR"
 mkdir -p "$APP_DIR"
-cp -r "$SRC_DIR"/. "$APP_DIR"/
+if [ "$SRC_DIR" != "$APP_DIR" ]; then
+  cp -r "$SRC_DIR"/. "$APP_DIR"/
+else
+  echo ">>> 已经在 $APP_DIR 里面运行（比如 git pull 之后重新装），跳过复制"
+fi
 cd "$APP_DIR"
 
 echo ">>> 创建 venv + 安装依赖"

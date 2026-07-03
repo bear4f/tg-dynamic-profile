@@ -55,10 +55,9 @@ cd ~/tg-dynamic-profile
 
 如果是用 systemd 常驻的，菜单改完不用 `systemctl restart`，等几秒生效即可；只有改 `api_id`/`api_hash`/`session` 这类需要重新登录的项才需要重启。
 
-> **快捷方式**：`deploy.sh` / `install.sh` 装好后会自动往 `~/.bashrc` 加一条 `emoji` 命令别名。新开一个终端窗口，直接敲 `emoji`（`source ~/.bashrc` 或重新登录终端后生效）就能秒开这个交互菜单，不用记路径也不用敲完整命令。已经部署过的实例手动加一行也一样：
-> ```bash
-> echo "alias emoji='cd ~/tg-dynamic-profile && .venv/bin/python app.py menu'" >> ~/.bashrc && source ~/.bashrc
-> ```
+> **快捷方式**：`deploy.sh` / `install.sh` 装好后会自动往 `~/.bashrc` 注册一个 `emoji` 函数。新开一个终端窗口，直接敲 `emoji`（`source ~/.bashrc` 或重新登录终端后生效）就能秒开这个交互菜单，不用记路径也不用敲完整命令。
+>
+> `emoji` 会**优先用 `systemctl show tg-profile.service` 查真正在跑的服务用的是哪个目录**，查不到才退回脚本安装时的目录——如果你先用 `deploy.sh` 装过一次（比如到 `~/tg-dynamic-profile`），后来又用 `install.sh` 装了 systemd 服务（到 `/opt/tg-dynamic-profile`），这两份 `config.json` 是完全独立的，`emoji` 改的必须是服务真正在读的那份，不然改了跟没改一样。想更新到这个逻辑，直接重新跑一遍 `deploy.sh` 或 `install.sh`（幂等，不会破坏现有配置和登录状态）即可覆盖旧的 `emoji` 定义。
 
 ---
 
